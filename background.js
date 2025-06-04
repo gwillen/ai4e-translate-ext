@@ -140,7 +140,7 @@ async function getStoredOptions() {
 }
 
 /**
- * Handle translation request using configured LLM
+ * Handle translation request using OpenAI API
  * @param {string} text - Text to translate
  * @param {string} targetLanguage - Target language code
  * @returns {Promise<Object>} Translation result
@@ -150,12 +150,12 @@ async function handleTranslateRequest(text, targetLanguage = 'en') {
     const options = await getStoredOptions();
 
     if (!options.apiEndpoint || !options.apiKey) {
-      throw new Error('API endpoint and key must be configured in options');
+      throw new Error('OpenAI API endpoint and key must be configured in options');
     }
 
     console.log(`Translating text to ${targetLanguage}:`, text.substring(0, 100) + '...');
 
-    // Make API request to LLM service
+    // Make API request to OpenAI
     const response = await fetch(options.apiEndpoint, {
       method: 'POST',
       headers: {
@@ -163,7 +163,7 @@ async function handleTranslateRequest(text, targetLanguage = 'en') {
         'Authorization': `Bearer ${options.apiKey}`
       },
       body: JSON.stringify({
-        model: options.model || 'gpt-3.5-turbo',
+        model: options.modelName || 'gpt-3.5-turbo',
         messages: [
           {
             role: 'system',
@@ -174,20 +174,20 @@ async function handleTranslateRequest(text, targetLanguage = 'en') {
             content: text
           }
         ],
-        max_tokens: 2000,
-        temperature: 0.1
+        max_tokens: options.maxTokens || 2000,
+        temperature: options.temperature || 0.1
       })
     });
 
     if (!response.ok) {
-      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+      throw new Error(`OpenAI API request failed: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
     const translatedText = data.choices?.[0]?.message?.content?.trim();
 
     if (!translatedText) {
-      throw new Error('No translation returned from API');
+      throw new Error('No translation returned from OpenAI API');
     }
 
     console.log('Translation successful');

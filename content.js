@@ -19,116 +19,31 @@ initializeContentScript();
 function initializeContentScript() {
   console.log('Initializing AI Translation content script');
 
-  // Add selection event listeners
-  document.addEventListener('mouseup', handleTextSelection);
-  document.addEventListener('keyup', handleKeyboardSelection);
-
   // Listen for messages from background script
   browser.runtime.onMessage.addListener(handleMessage);
 }
 
 /**
- * Handle text selection with mouse
- * @param {Event} event - Mouse event
+ * Get currently selected text
+ * @returns {string} Selected text
  */
-function handleTextSelection(event) {
-  setTimeout(() => {
-    const selection = window.getSelection();
-    const text = selection.toString().trim();
-
-    if (text.length > 0) {
-      selectedText = text;
-      console.log('Text selected:', text.substring(0, 50) + '...');
-      showTranslationButton(event.pageX, event.pageY);
-    } else {
-      hideTranslationButton();
-    }
-  }, 10);
+function getSelectedText() {
+  const selection = window.getSelection();
+  return selection.toString().trim();
 }
 
 /**
- * Handle text selection with keyboard
- * @param {Event} event - Keyboard event
- */
-function handleKeyboardSelection(event) {
-  // Only handle arrow keys and selection shortcuts
-  if (event.key === 'ArrowLeft' || event.key === 'ArrowRight' ||
-      event.key === 'ArrowUp' || event.key === 'ArrowDown' ||
-      (event.ctrlKey && event.key === 'a')) {
-    handleTextSelection(event);
-  }
-}
-
-/**
- * Show translation button near selected text
- * @param {number} x - X coordinate
- * @param {number} y - Y coordinate
- */
-function showTranslationButton(x, y) {
-  hideTranslationButton(); // Remove existing button
-
-  const button = document.createElement('div');
-  button.id = 'ai-translate-button';
-  button.textContent = '🌐 Translate';
-  button.style.cssText = `
-    position: absolute;
-    left: ${x + 10}px;
-    top: ${y - 40}px;
-    background: #4A90E2;
-    color: white;
-    padding: 8px 12px;
-    border-radius: 4px;
-    font-size: 12px;
-    font-family: Arial, sans-serif;
-    cursor: pointer;
-    z-index: 10000;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-    transition: all 0.2s ease;
-    user-select: none;
-  `;
-
-  button.addEventListener('click', () => {
-    translateSelectedText();
-  });
-
-  button.addEventListener('mouseenter', () => {
-    button.style.background = '#357ABD';
-    button.style.transform = 'scale(1.05)';
-  });
-
-  button.addEventListener('mouseleave', () => {
-    button.style.background = '#4A90E2';
-    button.style.transform = 'scale(1)';
-  });
-
-  document.body.appendChild(button);
-
-  // Auto-hide after 5 seconds
-  setTimeout(() => {
-    hideTranslationButton();
-  }, 5000);
-}
-
-/**
- * Hide translation button
- */
-function hideTranslationButton() {
-  const existingButton = document.getElementById('ai-translate-button');
-  if (existingButton) {
-    existingButton.remove();
-  }
-}
-
-/**
- * Translate the currently selected text
+ * Translate the currently selected text and replace it in place
  */
 async function translateSelectedText() {
+  const selectedText = getSelectedText();
+
   if (!selectedText) {
     console.log('No text selected for translation');
+    showError('Please select some text to translate');
     return;
   }
 
-  hideTranslationButton();
   showLoadingIndicator();
 
   try {
@@ -148,7 +63,9 @@ async function translateSelectedText() {
     if (response.error) {
       showError(response.error);
     } else {
-      showTranslationResult(response);
+      // Replace the selected text with translation
+      replaceSelectedText(response.translatedText);
+      showNotification(`Translated to ${targetLanguage}`);
     }
 
   } catch (error) {
@@ -377,7 +294,6 @@ function handleMessage(message) {
 
   switch (message.action) {
     case 'translateSelection':
-      selectedText = message.text;
       translateSelectedText();
       break;
 
@@ -388,11 +304,112 @@ function handleMessage(message) {
 }
 
 /**
- * Translate entire page (placeholder for future implementation)
+ * Translate entire page by finding and translating all text content
  */
-function translateEntirePage() {
-  showNotification('Page translation feature coming soon!');
-  console.log('Page translation requested - feature not yet implemented');
+async function translateEntirePage() {
+  console.log('Starting full page translation...');
+  showLoadingIndicator();
+
+  try {
+    // Get target language from options
+    const options = await browser.runtime.sendMessage({ action: 'getOptions' });
+    const targetLanguage = options.defaultTargetLanguage || 'en';
+
+    // Find all text nodes in the page
+    const textNodes = getTextNodes(document.body);
+    console.log(`Found ${textNodes.length} text nodes to translate`);
+
+    let translatedCount = 0;
+
+    // Translate text nodes in batches to avoid overwhelming the API
+    for (let i = 0; i < textNodes.length; i += 5) {
+      const batch = textNodes.slice(i, i + 5);
+      const promises = batch.map(async (node) => {
+        const text = node.textContent.trim();
+
+        // Skip very short text, numbers only, or mostly punctuation
+        if (text.length < 3 || /^[\d\s\p{P}]+$/u.test(text)) {
+          return;
+        }
+
+        try {
+          const response = await browser.runtime.sendMessage({
+            action: 'translateText',
+            text: text,
+            targetLanguage: targetLanguage
+          });
+
+          if (!response.error && response.translatedText) {
+            node.textContent = response.translatedText;
+            translatedCount++;
+          }
+        } catch (error) {
+          console.error('Failed to translate text node:', error);
+        }
+      });
+
+      // Wait for current batch to complete before processing next batch
+      await Promise.all(promises);
+
+      // Small delay between batches to be respectful to the API
+      if (i + 5 < textNodes.length) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+
+    hideLoadingIndicator();
+    showNotification(`Page translated! ${translatedCount} text elements translated to ${targetLanguage}`);
+    console.log(`Page translation completed. Translated ${translatedCount} elements.`);
+
+  } catch (error) {
+    console.error('Page translation failed:', error);
+    hideLoadingIndicator();
+    showError('Page translation failed. Please check your API configuration.');
+  }
+}
+
+/**
+ * Get all text nodes from an element
+ * @param {Element} element - Root element to search
+ * @returns {Array} Array of text nodes
+ */
+function getTextNodes(element) {
+  const textNodes = [];
+  const walker = document.createTreeWalker(
+    element,
+    NodeFilter.SHOW_TEXT,
+    {
+      acceptNode: function(node) {
+        // Skip script, style, and other non-visible elements
+        const parent = node.parentElement;
+        if (!parent) return NodeFilter.FILTER_REJECT;
+
+        const tagName = parent.tagName.toLowerCase();
+        const skipTags = ['script', 'style', 'noscript', 'code', 'pre'];
+
+        if (skipTags.includes(tagName)) {
+          return NodeFilter.FILTER_REJECT;
+        }
+
+        // Skip if parent is hidden
+        const style = window.getComputedStyle(parent);
+        if (style.display === 'none' || style.visibility === 'hidden') {
+          return NodeFilter.FILTER_REJECT;
+        }
+
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    }
+  );
+
+  let node;
+  while (node = walker.nextNode()) {
+    if (node.textContent.trim()) {
+      textNodes.push(node);
+    }
+  }
+
+  return textNodes;
 }
 
 /**

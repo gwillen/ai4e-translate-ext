@@ -10,8 +10,8 @@ let elements = {};
 
 // Default settings
 const DEFAULT_SETTINGS = {
-  apiProvider: 'custom',
-  apiEndpoint: '',
+  apiProvider: 'openai',
+  apiEndpoint: 'https://api.openai.com/v1/chat/completions',
   apiKey: '',
   modelName: 'gpt-3.5-turbo',
   defaultTargetLanguage: 'en',
@@ -27,9 +27,6 @@ const DEFAULT_SETTINGS = {
 // Provider endpoints
 const PROVIDER_ENDPOINTS = {
   openai: 'https://api.openai.com/v1/chat/completions',
-  anthropic: 'https://api.anthropic.com/v1/messages',
-  cohere: 'https://api.cohere.ai/v1/generate',
-  huggingface: 'https://api-inference.huggingface.co/models/',
   custom: ''
 };
 
@@ -171,10 +168,7 @@ function handleProviderChange() {
 
   // Update model placeholder based on provider
   const modelPlaceholders = {
-    openai: 'gpt-3.5-turbo, gpt-4, gpt-4-turbo',
-    anthropic: 'claude-3-sonnet, claude-3-opus',
-    cohere: 'command, command-light',
-    huggingface: 'model-name',
+    openai: 'gpt-3.5-turbo, gpt-4, gpt-4o',
     custom: 'model-name'
   };
 

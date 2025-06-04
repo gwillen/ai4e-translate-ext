@@ -26,6 +26,9 @@ function initializePopup() {
     translateBtn: document.getElementById('translate-btn'),
     translateBtnText: document.getElementById('translate-btn-text'),
     translateBtnSpinner: document.getElementById('translate-btn-spinner'),
+    translatePageBtn: document.getElementById('translate-page-btn'),
+    translatePageBtnText: document.getElementById('translate-page-btn-text'),
+    translatePageBtnSpinner: document.getElementById('translate-page-btn-spinner'),
     translationResult: document.getElementById('translation-result'),
     translatedText: document.getElementById('translated-text'),
     copyResultBtn: document.getElementById('copy-result-btn'),
@@ -48,6 +51,7 @@ function initializePopup() {
 function addEventListeners() {
   // Translation functionality
   elements.translateBtn.addEventListener('click', handleTranslate);
+  elements.translatePageBtn.addEventListener('click', handleTranslatePage);
   elements.sourceText.addEventListener('input', handleSourceTextChange);
   elements.sourceText.addEventListener('keydown', handleSourceTextKeydown);
 
@@ -97,10 +101,12 @@ async function updateConfigurationStatus() {
       elements.statusIndicator.classList.add('configured');
       elements.statusText.textContent = 'Ready to translate';
       elements.translateBtn.disabled = false;
+      elements.translatePageBtn.disabled = false;
     } else {
       elements.statusIndicator.classList.remove('configured');
       elements.statusText.textContent = 'Configuration required';
       elements.translateBtn.disabled = true;
+      elements.translatePageBtn.disabled = true;
     }
   } catch (error) {
     console.error('Error checking configuration:', error);
@@ -113,7 +119,11 @@ async function updateConfigurationStatus() {
  */
 function handleSourceTextChange() {
   const hasText = elements.sourceText.value.trim().length > 0;
-  elements.translateBtn.disabled = !hasText || elements.statusIndicator.classList.contains('configured') === false;
+  const isConfigured = elements.statusIndicator.classList.contains('configured');
+
+  elements.translateBtn.disabled = !hasText || !isConfigured;
+  // Page translation doesn't depend on text input
+  elements.translatePageBtn.disabled = !isConfigured;
 
   // Hide result if text is cleared
   if (!hasText) {
@@ -177,6 +187,46 @@ async function handleTranslate() {
 }
 
 /**
+ * Handle translate page button click
+ */
+async function handleTranslatePage() {
+  console.log('Starting page translation...');
+
+  // Show loading state
+  setTranslatePageButtonLoading(true);
+  hideTranslationResult();
+
+  try {
+    // Get the active tab and send translation request
+    const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+    const activeTab = tabs[0];
+
+    if (!activeTab) {
+      throw new Error('No active tab found');
+    }
+
+    // Send message to content script to translate the page
+    await browser.tabs.sendMessage(activeTab.id, {
+      action: 'translatePage'
+    });
+
+    setTranslatePageButtonLoading(false);
+
+    // Close popup after initiating page translation
+    setTimeout(() => {
+      window.close();
+    }, 1000);
+
+    showNotification('Page translation started! Check the page for progress.');
+
+  } catch (error) {
+    console.error('Page translation failed:', error);
+    setTranslatePageButtonLoading(false);
+    showError('Page translation failed. Please check your configuration and try again.');
+  }
+}
+
+/**
  * Set translate button loading state
  * @param {boolean} loading - Whether to show loading state
  */
@@ -189,6 +239,22 @@ function setTranslateButtonLoading(loading) {
     elements.translateBtn.disabled = false;
     elements.translateBtnText.classList.remove('hidden');
     elements.translateBtnSpinner.classList.add('hidden');
+  }
+}
+
+/**
+ * Set translate page button loading state
+ * @param {boolean} loading - Whether to show loading state
+ */
+function setTranslatePageButtonLoading(loading) {
+  if (loading) {
+    elements.translatePageBtn.disabled = true;
+    elements.translatePageBtnText.classList.add('hidden');
+    elements.translatePageBtnSpinner.classList.remove('hidden');
+  } else {
+    elements.translatePageBtn.disabled = false;
+    elements.translatePageBtnText.classList.remove('hidden');
+    elements.translatePageBtnSpinner.classList.add('hidden');
   }
 }
 
