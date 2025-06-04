@@ -285,6 +285,23 @@ body {
   font-weight: 500;
 }
 
+.stop-btn {
+  margin-top: 12px;
+  padding: 6px 12px;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  width: 100%;
+}
+
+.stop-btn:hover {
+  background: #c82333;
+}
+
 .hidden {
   display: none !important;
 }
@@ -638,5 +655,13 @@ body {
 
   .batch-info {
     color: #6bb6ff;
+  }
+
+  .stop-btn {
+    background: #dc3545;
+  }
+
+  .stop-btn:hover {
+    background: #c82333;
   }
 }

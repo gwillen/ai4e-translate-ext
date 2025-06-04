@@ -4490,11 +4490,528 @@ Perfect! Now let's create a simple test page to demonstrate the new progress tra
 
 ---
 
+```diff
+- 
++ <!DOCTYPE html>
++ <html lang="en">
++ <head>
++     <meta charset="UTF-8">
++     <meta name="viewport" content="width=device-width, initial-scale=1.0">
++     <title>Translation Test Page</title>
++     <style>
++         body {
++             font-family: Arial, sans-serif;
++             max-width: 800px;
++             margin: 0 auto;
++             padding: 20px;
++             line-height: 1.6;
++         }
++         .section {
++             margin: 30px 0;
++             padding: 20px;
++             border: 1px solid #ddd;
++             border-radius: 8px;
++         }
++         h1, h2, h3 {
++             color: #333;
++         }
++         .highlight {
++             background: #f0f8ff;
++             padding: 10px;
++             border-left: 4px solid #4a90e2;
++             margin: 15px 0;
++         }
++         .quote {
++             font-style: italic;
++             border-left: 3px solid #ccc;
++             padding-left: 15px;
++             margin: 20px 0;
++         }
++         ul, ol {
++             margin: 15px 0;
++         }
++         li {
++             margin: 8px 0;
++         }
++     </style>
++ </head>
++ <body>
++     <h1>AI Translation Extension Test Page</h1>
++ 
++     <div class="section">
++         <h2>Welcome Section</h2>
++         <p>This is a test page designed to demonstrate the AI Translation Extension's new progress tracking features. When you translate this page, you'll see real-time progress updates and visual highlighting of elements being translated.</p>
++ 
++         <div class="highlight">
++             <strong>Key Features:</strong> The extension now shows which elements are currently being translated with a subtle blue pulse, and completed translations are highlighted in green with different colors for each batch.
++         </div>
++     </div>
++ 
++     <div class="section">
++         <h2>Sample Content</h2>
++         <p>Here are various types of content to translate:</p>
++ 
++         <h3>Short Paragraphs</h3>
++         <p>This is the first paragraph with some sample text.</p>
++         <p>This is the second paragraph with different content.</p>
++         <p>This is the third paragraph to demonstrate batch processing.</p>
++ 
++         <h3>Lists and Items</h3>
++         <ul>
++             <li>First list item with some text</li>
++             <li>Second list item with more content</li>
++             <li>Third list item for variety</li>
++             <li>Fourth list item to show grouping</li>
++             <li>Fifth list item in the same batch</li>
++         </ul>
++ 
++         <ol>
++             <li>Numbered item one</li>
++             <li>Numbered item two</li>
++             <li>Numbered item three</li>
++         </ol>
++     </div>
++ 
++     <div class="section">
++         <h2>Longer Content</h2>
++         <p>This section contains longer paragraphs to test how the translation system handles more substantial text blocks. The progress tracking should show these elements being processed in batches, with clear visual feedback about which elements are currently being translated and which have been completed.</p>
++ 
++         <div class="quote">
++             "The best way to test a translation system is to provide it with diverse content that includes different text structures, lengths, and formatting. This helps ensure that the progress tracking works correctly across various scenarios."
++         </div>
++ 
++         <p>Each batch of elements will be highlighted with a different color border when completed, allowing you to see which elements were translated together in a single API call. This makes it easy to understand the batching strategy and see the translation progress in real-time.</p>
++     </div>
++ 
++     <div class="section">
++         <h2>Technical Details</h2>
++         <p>The extension processes text elements in batches of 5 to be respectful to the API rate limits. You can observe this behavior through:</p>
++ 
++         <ul>
++             <li>The progress overlay in the top-right corner of the page</li>
++             <li>The progress display in the extension popup</li>
++             <li>The visual highlighting of elements being processed</li>
++             <li>The color-coded borders showing batch groupings</li>
++         </ul>
++ 
++         <h3>Visual Indicators</h3>
++         <p>Blue pulsing background: Element currently being translated</p>
++         <p>Green background with colored border: Element successfully translated</p>
++         <p>Different border colors: Different batches (up to 5 colors cycle)</p>
++     </div>
++ 
++     <div class="section">
++         <h2>Instructions</h2>
++         <p>To test the progress tracking features:</p>
++         <ol>
++             <li>Make sure your API is configured in the extension options</li>
++             <li>Open the extension popup</li>
++             <li>Click "Translate Page" button</li>
++             <li>Watch the progress indicators and element highlighting</li>
++             <li>Observe how elements are grouped by batch colors</li>
++         </ol>
++ 
++         <p>The popup will show real-time progress including the number of elements completed, current batch being processed, and overall percentage complete.</p>
++     </div>
++ </body>
++ </html>
++ 
+```
+
+---
+
+Now let's update the README to document the new progress tracking features:
+
+---
+
+
+
+---
+
+Let me check the current README structure:
+
+---
+
+Read file: README.md
+
+---
+
+I can see the README has a different structure. Let me update the features section to include the new progress tracking features:
+
+---
+
+
+
+---
+
+Now let's update the usage section to include information about the progress tracking:
+
+---
+
+
+
+---
+
+Let's also update the roadmap to reflect that page translation is now implemented:
+
+---
+
+
+
+---
+
+Now let's commit our final changes and create a summary:
+
+---
+
+```bash
+git add -A && git commit -m "Add test page and update documentation for progress tracking features"
+```
+
+```
+gwillen@quokka:~/src/ai4e-translate-ext$ git add -A && git commit -m "Add test page and update 
+documentation for progress tracking featugit add -A && git commit -m "Add test page and update 
+documentation for progress tracking features"
+[master 89b4614] Add test page and update documentation for progress tracking features
+ 3 files changed, 430 insertions(+), 9 deletions(-)
+ create mode 100644 test-page.html
+gwillen@quokka:~/src/ai4e-translate-ext$
+```
+
+---
+
+Perfect! I've successfully implemented all the visual progress tracking and feedback features you requested. Here's a comprehensive summary of what's been added:
+
+## 🎉 New Progress Tracking Features Implemented
+
+### **Visual Progress Indicators**
+
+1. **On-Page Progress Overlay**
+   - Appears in the top-right corner during page translation
+   - Shows real-time completion count, percentage, and current batch info
+   - Includes a smooth progress bar with gradient styling
+   - Auto-hides after completion
+
+2. **Popup Progress Display**
+   - Integrated into the extension popup interface
+   - Shows detailed progress with element counts and batch information
+   - Updates in real-time as translation progresses
+   - Synchronized with the on-page overlay
+
+### **Element Highlighting System**
+
+1. **Translation In-Progress (Blue Pulse)**
+   - Elements currently being translated show a subtle blue pulsing background
+   - Left border with animated color changes
+   - Non-intrusive gradient background that doesn't interfere with readability
+
+2. **Translation Complete (Green with Batch Colors)**
+   - Completed elements get a green background with colored left borders
+   - 5 different border colors cycle to show batch groupings:
+     - Green (Batch 0)
+     - Blue (Batch 1) 
+     - Purple (Batch 2)
+     - Orange (Batch 3)
+     - Pink (Batch 4)
+   - Each batch of 5 elements gets the same border color so you can see which were translated together
+
+### **Batch Processing Visualization**
+
+1. **Real-time Batch Updates**
+   - Progress shows "Processing batch X of Y (Z elements)"
+   - Each batch of 5 elements is highlighted together
+   - Color-coded borders persist after translation to show groupings
+   - Batch information stored as data attributes on elements
+
+2. **Smart Progress Tracking**
+   - Filters out non-translatable content (numbers, punctuation, short text)
+   - Shows accurate counts of actual translatable elements
+   - Updates progress in real-time as each element completes
+
+### **Technical Implementation**
+
+1. **Message Passing System**
+   - Content script sends progress updates to background script
+   - Background script forwards updates to popup (if open)
+   - Graceful handling when popup is closed
+
+2. **Performance Optimizations**
+   - Efficient DOM querying and text node filtering
+   - Minimal DOM manipulation for highlighting
+   - Smooth CSS transitions and animations
+
+3. **Dark Mode Support**
+   - All new UI elements fully support dark mode
+   - Appropriate color adjustments for visibility
+   - Consistent styling with existing interface
+
+### **User Experience Enhancements**
+
+1. **Clear Visual Feedback**
+   - Users can see exactly which elements are being processed
+   - Batch groupings help understand the translation strategy
+   - Progress information helps set expectations for completion time
+
+2. **Non-Intrusive Design**
+   - Subtle highlighting that doesn't interfere with content readability
+   - Progress overlays positioned to avoid content obstruction
+   - Print styles hide all translation UI elements
+
+3. **Test Page Included**
+   - `test-page.html` with diverse content types for testing
+   - Instructions for observing all the new features
+   - Various text structures to demonstrate batch processing
+
+### **How to Test**
+
+1. Open `test-page.html` in Firefox
+2. Load the extension and configure your OpenAI API
+3. Open the extension popup
+4. Click "Translate Page" 
+5. Watch the magic happen:
+   - Progress overlay appears in top-right
+   - Popup shows detailed progress
+   - Elements pulse blue while being translated
+   - Completed elements turn green with colored borders
+   - Each batch gets a different border color
+
+The implementation provides exactly what you requested: comprehensive visual feedback showing translation progress, element highlighting during processing, batch grouping visualization, and real-time progress updates in both the page overlay and popup interface. The system is designed to be informative yet non-intrusive, helping users understand the translation process while maintaining excellent usability.
+
+---
+
+_**User**_
+
+This is great! A few more things.
+- When translating links, it looks like something weird is happening to the spacing around the link -- perhaps some whitespace is getting eaten when reconstructing the html. Make sure you get this right -- not just for links but in general.
+- Let's add a 'stop translating' button to the popup that shows our progress.
+- When we translate selected text, it seems like this causes problems if the selected text spans elements. Let's use the same logic for selected text as for whole-page, in terms of preserving the page structure and formatting. Remember to avoid duplicating code, and try to combine common code to keep things as short and simple as possible.
+- Once text is translated, I want hovering over the translated text to subtly highlight it, indicating that it's clickable; clicking should bring up some sort of UI element that lets me play with the translation (e.g. buttons for "translate completely literally" or "translate idioms" or whatever seems useful to adjust.
+
+---
+
+_**Assistant**_
+
+
+
+---
+
+Excellent feedback! You're absolutely right about these issues. Let me implement these improvements systematically:
+
+## 1. Fix Spacing Issues Around Links and Elements
+
+First, let's fix the whitespace preservation issue by being more careful about how we handle text nodes:
+
+---
+
+
+
+---
+
+## 2. Add Stop Translation Button
+
+Let's add a stop button to the progress display and implement cancellation logic:
+
+---
+
+
+
+---
+
+Now let's add CSS for the stop button:
+
+---
+
+
+
+---
+
+Add dark mode support for the stop button:
+
+---
+
+
+
+---
+
+Now let's add the stop functionality to the popup JavaScript:
+
+---
+
+
+
+---
+
+Add the stop translation handler function:
+
+---
+
+
+
+---
+
+Now let's add the stop functionality to the content script. First, let's add a translation cancellation flag and handle the stop message:
+
+---
+
 
 
 ---
 
 
+
+---
+
+Now let's update the message handler to handle stop requests:
+
+---
+
+
+
+---
+
+Now let's add the stop translation function:
+
+---
+
+
+
+---
+
+Now let's update the page translation function to check for cancellation and manage the translation state:
+
+---
+
+
+
+---
+
+Now let's add cancellation checks in the translation loop:
+
+---
+
+
+
+---
+
+Also add a cancellation check at the end of the function:
+
+---
+
+
+
+---
+
+## 3. Unified Translation Logic for Selected Text
+
+Now let's create a unified translation function that both page and selection translation can use. First, let's extract the common translation logic:
+
+---
+
+
+
+---
+
+Let me find the translateSelectedText function:
+
+---
+
+<details>
+            <summary>Grep search for "async function translateSelectedText" • **2** files</summary>
+        
+| File | Line | Match |
+|------|------|-------|
+| `file:///home/gwillen/src/ai4e-translate-ext/content.js` | L41 | `async function translateSelectedText() {` |
+| `file:///home/gwillen/src/ai4e-translate-ext/content.js` | L41 | `async function translateSelectedText() {` |
+
+</details>
+
+---
+
+Read file: content.js
+
+---
+
+Now let me update the translateSelectedText function and create helper functions for unified translation:
+
+---
+
+
+
+---
+
+Let me check the exact format of the translateSelectedText function:
+
+---
+
+Read file: content.js
+
+---
+
+Now let me replace the translateSelectedText function with the correct formatting:
+
+---
+
+
+
+---
+
+Now let me add the helper functions after the existing functions. I'll add them after the stopTranslation function:
+
+---
+
+
+
+---
+
+Now I need to update the translateEntirePage function to use the new unified logic:
+
+---
+
+
+
+---
+
+## 4. Add Hover and Click Interactions for Translated Text
+
+Now let's add the hover effects and click interactions for translated text. First, let's add the CSS for hover effects:
+
+---
+
+
+
+---
+
+Now let's add the translation adjustment menu CSS:
+
+---
+
+
+
+---
+
+Add dark mode support for the translation menu:
+
+---
+
+
+
+---
+
+Now let's add the click event handler for translated elements in the content script. I'll add this after the initialization:
+
+---
+
+
+
+---
+
+
+
+---
+
+
+
+Now let's add the click handler and translation menu functions. I'll add them after the existing functions:
 
 ---
 

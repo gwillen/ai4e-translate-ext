@@ -10,6 +10,10 @@ let isTranslationMode = false;
 let translationOverlay = null;
 let selectedText = '';
 
+// Translation state management
+let isTranslationActive = false;
+let shouldStopTranslation = false;
+
 // Initialize content script
 initializeContentScript();
 
@@ -21,6 +25,9 @@ function initializeContentScript() {
 
   // Listen for messages from background script
   browser.runtime.onMessage.addListener(handleMessage);
+
+  // Add click event listener for translated elements
+  document.addEventListener('click', handleTranslatedElementClick);
 }
 
 /**
@@ -33,44 +40,37 @@ function getSelectedText() {
 }
 
 /**
- * Translate the currently selected text and replace it in place
+ * Translate the currently selected text using structure-preserving logic
  */
 async function translateSelectedText() {
-  const selectedText = getSelectedText();
+  const selection = window.getSelection();
 
-  if (!selectedText) {
-    console.log('No text selected for translation');
+  if (!selection.rangeCount || selection.isCollapsed) {
     showError('Please select some text to translate');
     return;
   }
 
-  showLoadingIndicator();
+  console.log('Translating selected text with structure preservation');
 
   try {
+    // Get all text nodes within the selection
+    const range = selection.getRangeAt(0);
+    const textNodes = getTextNodesInRange(range);
+
+    if (textNodes.length === 0) {
+      showError('No translatable text in selection');
+      return;
+    }
+
     // Get target language from options
     const options = await browser.runtime.sendMessage({ action: 'getOptions' });
     const targetLanguage = options.defaultTargetLanguage || 'en';
 
-    // Send translation request to background script
-    const response = await browser.runtime.sendMessage({
-      action: 'translateText',
-      text: selectedText,
-      targetLanguage: targetLanguage
-    });
-
-    hideLoadingIndicator();
-
-    if (response.error) {
-      showError(response.error);
-    } else {
-      // Replace the selected text with translation
-      replaceSelectedText(response.translatedText);
-      showNotification(`Translated to ${targetLanguage}`);
-    }
+    // Use the same translation logic as page translation
+    await translateTextNodes(textNodes, targetLanguage, 'selection');
 
   } catch (error) {
     console.error('Translation failed:', error);
-    hideLoadingIndicator();
     showError('Translation failed. Please check your API configuration.');
   }
 }
@@ -234,6 +234,200 @@ function hideProgressIndicator() {
       isTranslating: false
     }
   }).catch(() => {}); // Ignore if popup is closed
+}
+
+/**
+ * Stop ongoing translation
+ */
+function stopTranslation() {
+  console.log('Translation stop requested');
+  shouldStopTranslation = true;
+  isTranslationActive = false;
+
+  // Remove all translation styling
+  const translatingElements = document.querySelectorAll('.ai-translating');
+  translatingElements.forEach(element => {
+    element.classList.remove('ai-translating');
+  });
+
+  // Hide progress indicators
+  hideProgressIndicator();
+
+  showNotification('Translation stopped by user');
+}
+
+/**
+ * Get text nodes within a selection range
+ */
+function getTextNodesInRange(range) {
+  const textNodes = [];
+  const walker = document.createTreeWalker(
+    range.commonAncestorContainer,
+    NodeFilter.SHOW_TEXT,
+    {
+      acceptNode: function(node) {
+        // Skip script, style, and other non-visible elements
+        const parent = node.parentElement;
+        if (!parent) return NodeFilter.FILTER_REJECT;
+
+        const tagName = parent.tagName.toLowerCase();
+        const skipTags = ['script', 'style', 'noscript', 'code', 'pre'];
+
+        if (skipTags.includes(tagName)) {
+          return NodeFilter.FILTER_REJECT;
+        }
+
+        // Check if node intersects with selection range
+        if (range.intersectsNode(node)) {
+          return NodeFilter.FILTER_ACCEPT;
+        }
+
+        return NodeFilter.FILTER_REJECT;
+      }
+    }
+  );
+
+  let node;
+  while (node = walker.nextNode()) {
+    if (node.textContent.trim()) {
+      textNodes.push(node);
+    }
+  }
+
+  return textNodes;
+}
+
+/**
+ * Unified function to translate a collection of text nodes
+ */
+async function translateTextNodes(textNodes, targetLanguage, context = 'page') {
+  // Reset translation state
+  shouldStopTranslation = false;
+  isTranslationActive = true;
+
+  // Filter translatable nodes
+  const translatableNodes = textNodes.filter(node => {
+    const text = node.textContent.trim();
+    return text.length >= 3 && !/^[\d\s\p{P}]+$/u.test(text);
+  });
+
+  console.log(`${translatableNodes.length} nodes are translatable in ${context}`);
+
+  if (translatableNodes.length === 0) {
+    showNotification('No translatable text found');
+    return;
+  }
+
+  // Show appropriate progress indicator
+  if (context === 'page') {
+    const batchSize = 5;
+    const totalBatches = Math.ceil(translatableNodes.length / batchSize);
+    showProgressIndicator(translatableNodes.length, targetLanguage);
+
+    let translatedCount = 0;
+    let batchIndex = 0;
+
+    // Translate in batches for page translation
+    for (let i = 0; i < translatableNodes.length; i += batchSize) {
+      if (shouldStopTranslation) {
+        console.log('Translation cancelled by user');
+        return;
+      }
+
+      const batch = translatableNodes.slice(i, i + batchSize);
+      updateProgress(translatedCount, translatableNodes.length, batchIndex + 1, totalBatches, batch);
+
+      await translateBatch(batch, targetLanguage, batchIndex);
+      translatedCount += batch.length;
+      batchIndex++;
+
+      if (i + batchSize < translatableNodes.length) {
+        await new Promise(resolve => setTimeout(resolve, 800));
+      }
+    }
+
+    isTranslationActive = false;
+    setTimeout(() => hideProgressIndicator(), 3000);
+
+    if (!shouldStopTranslation) {
+      showNotification(`Page translation complete! ${translatedCount} elements translated to ${targetLanguage}`);
+    }
+  } else {
+    // For selection, translate immediately without progress UI
+    showLoadingIndicator();
+    await translateBatch(translatableNodes, targetLanguage, 0);
+    hideLoadingIndicator();
+
+    if (!shouldStopTranslation) {
+      showNotification(`Selection translated to ${targetLanguage}`);
+    }
+  }
+}
+
+/**
+ * Translate a batch of text nodes
+ */
+async function translateBatch(batch, targetLanguage, batchIndex) {
+  // Highlight current batch being translated (for page translation)
+  batch.forEach(node => {
+    const element = node.parentElement;
+    if (element) {
+      element.classList.add('ai-translating');
+    }
+  });
+
+  // Translate the batch
+  const promises = batch.map(async (node) => {
+    const text = node.textContent.trim();
+
+    try {
+      const response = await browser.runtime.sendMessage({
+        action: 'translateText',
+        text: text,
+        targetLanguage: targetLanguage
+      });
+
+      if (!response.error && response.translatedText) {
+        // Preserve whitespace structure when replacing text
+        const originalText = node.textContent;
+        const leadingWhitespace = originalText.match(/^\s*/)[0];
+        const trailingWhitespace = originalText.match(/\s*$/)[0];
+        const trimmedTranslation = response.translatedText.trim();
+
+        node.textContent = leadingWhitespace + trimmedTranslation + trailingWhitespace;
+
+        // Update element styling
+        const element = node.parentElement;
+        if (element) {
+          element.classList.remove('ai-translating');
+          element.classList.add('ai-translated', `batch-${batchIndex % 5}`, 'ai-hover-enabled');
+
+          // Store translation data for re-translation features
+          element.setAttribute('data-translation-batch', batchIndex.toString());
+          element.setAttribute('data-original-text', originalText.trim());
+          element.setAttribute('data-translated-text', trimmedTranslation);
+          element.setAttribute('data-target-language', targetLanguage);
+        }
+      } else {
+        // Remove translating class if translation failed
+        const element = node.parentElement;
+        if (element) {
+          element.classList.remove('ai-translating');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to translate text node:', error);
+
+      // Remove translating class if translation failed
+      const element = node.parentElement;
+      if (element) {
+        element.classList.remove('ai-translating');
+      }
+    }
+  });
+
+  // Wait for current batch to complete
+  await Promise.all(promises);
 }
 
 /**
@@ -404,6 +598,10 @@ function handleMessage(message) {
     case 'translatePage':
       translateEntirePage();
       break;
+
+    case 'stopTranslation':
+      stopTranslation();
+      break;
   }
 }
 
@@ -423,108 +621,8 @@ async function translateEntirePage() {
     const textNodes = getTextNodes(document.body);
     console.log(`Found ${textNodes.length} text nodes to translate`);
 
-    // Filter and prepare translatable nodes
-    const translatableNodes = textNodes.filter(node => {
-      const text = node.textContent.trim();
-      return text.length >= 3 && !/^[\d\s\p{P}]+$/u.test(text);
-    });
-
-    console.log(`${translatableNodes.length} nodes are translatable`);
-
-    if (translatableNodes.length === 0) {
-      showNotification('No translatable text found on this page');
-      return;
-    }
-
-    // Calculate batches
-    const batchSize = 5;
-    const totalBatches = Math.ceil(translatableNodes.length / batchSize);
-
-    // Show progress indicator
-    showProgressIndicator(translatableNodes.length, targetLanguage);
-
-    let translatedCount = 0;
-    let batchIndex = 0;
-
-    // Translate text nodes in batches
-    for (let i = 0; i < translatableNodes.length; i += batchSize) {
-      const batch = translatableNodes.slice(i, i + batchSize);
-
-      // Update progress
-      updateProgress(translatedCount, translatableNodes.length, batchIndex + 1, totalBatches, batch);
-
-      // Highlight current batch being translated
-      batch.forEach(node => {
-        const element = node.parentElement;
-        if (element) {
-          element.classList.add('ai-translating');
-        }
-      });
-
-      // Translate the batch
-      const promises = batch.map(async (node, nodeIndex) => {
-        const text = node.textContent.trim();
-
-        try {
-          const response = await browser.runtime.sendMessage({
-            action: 'translateText',
-            text: text,
-            targetLanguage: targetLanguage
-          });
-
-          if (!response.error && response.translatedText) {
-            node.textContent = response.translatedText;
-
-            // Update element styling
-            const element = node.parentElement;
-            if (element) {
-              element.classList.remove('ai-translating');
-              element.classList.add('ai-translated', `batch-${batchIndex % 5}`);
-
-              // Store batch info for grouping
-              element.setAttribute('data-translation-batch', batchIndex.toString());
-            }
-
-            translatedCount++;
-
-            // Update progress in real-time
-            updateProgress(translatedCount, translatableNodes.length, batchIndex + 1, totalBatches, batch);
-          } else {
-            // Remove translating class if translation failed
-            const element = node.parentElement;
-            if (element) {
-              element.classList.remove('ai-translating');
-            }
-          }
-        } catch (error) {
-          console.error('Failed to translate text node:', error);
-
-          // Remove translating class if translation failed
-          const element = node.parentElement;
-          if (element) {
-            element.classList.remove('ai-translating');
-          }
-        }
-      });
-
-      // Wait for current batch to complete before processing next batch
-      await Promise.all(promises);
-
-      batchIndex++;
-
-      // Small delay between batches to be respectful to the API
-      if (i + batchSize < translatableNodes.length) {
-        await new Promise(resolve => setTimeout(resolve, 800));
-      }
-    }
-
-    // Hide progress indicator after completion
-    setTimeout(() => {
-      hideProgressIndicator();
-    }, 3000);
-
-    showNotification(`Page translation complete! ${translatedCount} elements translated to ${targetLanguage}`);
-    console.log(`Page translation completed. Translated ${translatedCount} elements.`);
+    // Use the unified translation logic
+    await translateTextNodes(textNodes, targetLanguage, 'page');
 
   } catch (error) {
     console.error('Page translation failed:', error);
@@ -575,6 +673,183 @@ function getTextNodes(element) {
   }
 
   return textNodes;
+}
+
+/**
+ * Handle clicks on translated elements
+ */
+function handleTranslatedElementClick(event) {
+  const element = event.target.closest('.ai-hover-enabled');
+
+  if (element && element.hasAttribute('data-original-text')) {
+    event.preventDefault();
+    event.stopPropagation();
+    showTranslationMenu(element, event.clientX, event.clientY);
+  }
+}
+
+/**
+ * Show translation adjustment menu
+ */
+function showTranslationMenu(element, x, y) {
+  // Remove any existing menu
+  hideTranslationMenu();
+
+  const originalText = element.getAttribute('data-original-text');
+  const translatedText = element.getAttribute('data-translated-text');
+  const targetLanguage = element.getAttribute('data-target-language');
+
+  const menu = document.createElement('div');
+  menu.id = 'ai-translation-menu';
+  menu.innerHTML = `
+    <div class="menu-header">
+      Translation Options
+      <button class="close-btn">&times;</button>
+    </div>
+    <div class="menu-content">
+      <div class="original-text">
+        <div class="text-label">Original:</div>
+        <div class="text-content">${escapeHtml(originalText)}</div>
+      </div>
+      <div class="current-translation">
+        <div class="text-label">Current Translation:</div>
+        <div class="text-content">${escapeHtml(translatedText)}</div>
+      </div>
+      <div class="menu-actions">
+        <button class="action-btn" data-action="literal">Literal Translation</button>
+        <button class="action-btn" data-action="natural">Natural Translation</button>
+        <button class="action-btn" data-action="formal">Formal Style</button>
+        <button class="action-btn" data-action="casual">Casual Style</button>
+        <button class="action-btn" data-action="revert">Restore Original</button>
+        <button class="action-btn primary" data-action="custom">Custom Prompt</button>
+      </div>
+    </div>
+  `;
+
+  // Position the menu
+  menu.style.left = Math.min(x, window.innerWidth - 350) + 'px';
+  menu.style.top = Math.min(y, window.innerHeight - 300) + 'px';
+
+  // Add event listeners
+  menu.querySelector('.close-btn').addEventListener('click', hideTranslationMenu);
+
+  menu.querySelectorAll('.action-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const action = e.target.getAttribute('data-action');
+      handleTranslationAction(element, action, originalText, targetLanguage);
+    });
+  });
+
+  // Close menu when clicking outside
+  setTimeout(() => {
+    document.addEventListener('click', handleMenuOutsideClick);
+  }, 100);
+
+  document.body.appendChild(menu);
+}
+
+/**
+ * Hide translation menu
+ */
+function hideTranslationMenu() {
+  const menu = document.getElementById('ai-translation-menu');
+  if (menu) {
+    menu.remove();
+  }
+  document.removeEventListener('click', handleMenuOutsideClick);
+}
+
+/**
+ * Handle clicks outside the translation menu
+ */
+function handleMenuOutsideClick(event) {
+  const menu = document.getElementById('ai-translation-menu');
+  if (menu && !menu.contains(event.target)) {
+    hideTranslationMenu();
+  }
+}
+
+/**
+ * Handle translation action from menu
+ */
+async function handleTranslationAction(element, action, originalText, targetLanguage) {
+  hideTranslationMenu();
+
+  let prompt = '';
+
+  switch (action) {
+    case 'literal':
+      prompt = `Translate this text to ${targetLanguage} as literally as possible, preserving the exact meaning and structure: "${originalText}"`;
+      break;
+    case 'natural':
+      prompt = `Translate this text to ${targetLanguage} in the most natural, fluent way: "${originalText}"`;
+      break;
+    case 'formal':
+      prompt = `Translate this text to ${targetLanguage} using formal, professional language: "${originalText}"`;
+      break;
+    case 'casual':
+      prompt = `Translate this text to ${targetLanguage} using casual, conversational language: "${originalText}"`;
+      break;
+    case 'revert':
+      // Restore original text
+      const textNode = getFirstTextNode(element);
+      if (textNode) {
+        textNode.textContent = originalText;
+        element.classList.remove('ai-translated', 'ai-hover-enabled');
+        element.removeAttribute('data-original-text');
+        element.removeAttribute('data-translated-text');
+        element.removeAttribute('data-target-language');
+        element.removeAttribute('data-translation-batch');
+      }
+      showNotification('Original text restored');
+      return;
+    case 'custom':
+      const customPrompt = prompt('Enter custom translation instructions:');
+      if (!customPrompt) return;
+      prompt = `${customPrompt} Translate to ${targetLanguage}: "${originalText}"`;
+      break;
+  }
+
+  if (prompt) {
+    showLoadingIndicator();
+
+    try {
+      const response = await browser.runtime.sendMessage({
+        action: 'translateText',
+        text: prompt,
+        targetLanguage: targetLanguage
+      });
+
+      hideLoadingIndicator();
+
+      if (!response.error && response.translatedText) {
+        const textNode = getFirstTextNode(element);
+        if (textNode) {
+          textNode.textContent = response.translatedText;
+          element.setAttribute('data-translated-text', response.translatedText);
+        }
+        showNotification('Translation updated');
+      } else {
+        showError(response.error || 'Translation failed');
+      }
+    } catch (error) {
+      hideLoadingIndicator();
+      showError('Translation failed');
+    }
+  }
+}
+
+/**
+ * Get the first text node within an element
+ */
+function getFirstTextNode(element) {
+  const walker = document.createTreeWalker(
+    element,
+    NodeFilter.SHOW_TEXT,
+    null,
+    false
+  );
+  return walker.nextNode();
 }
 
 /**

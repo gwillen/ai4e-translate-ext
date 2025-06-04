@@ -44,6 +44,12 @@ function initializePopup() {
   // Listen for progress messages from content scripts
   browser.runtime.onMessage.addListener(handleRuntimeMessage);
 
+  // Add stop translation button handler
+  const stopBtn = document.getElementById('stop-translation-btn');
+  if (stopBtn) {
+    stopBtn.addEventListener('click', handleStopTranslation);
+  }
+
   // Load initial state
   loadInitialState();
 }
@@ -315,6 +321,31 @@ function updateTranslationProgress(progress) {
   if (progressPercentage) progressPercentage.textContent = progress.percentage + '%';
   if (progressText) progressText.textContent = `${progress.completed} of ${progress.total} elements`;
   if (batchInfo) batchInfo.textContent = `Batch ${progress.currentBatch} of ${progress.totalBatches}`;
+}
+
+/**
+ * Handle stop translation button click
+ */
+async function handleStopTranslation() {
+  console.log('Stopping translation...');
+
+  try {
+    // Send stop message to active tab
+    const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+    if (tabs.length > 0) {
+      await browser.tabs.sendMessage(tabs[0].id, { action: 'stopTranslation' });
+    }
+
+    // Hide progress immediately
+    const progressContainer = document.getElementById('translation-progress');
+    if (progressContainer) {
+      progressContainer.classList.add('hidden');
+    }
+
+    showNotification('Translation stopped');
+  } catch (error) {
+    console.error('Error stopping translation:', error);
+  }
 }
 
 /**
