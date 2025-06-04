@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Translation Extension - Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="header-content">
+        <div class="logo">
+          <span class="icon">🌐</span>
+          <h1>AI Translation Extension</h1>
+        </div>
+        <div class="header-subtitle">
+          <p>Configure your translation settings and API connection</p>
+        </div>
+      </div>
+    </header>
+
+    <main class="main">
+      <div class="settings-container">
+        <!-- API Configuration Section -->
+        <section class="settings-section">
+          <div class="section-header">
+            <h2>🔧 API Configuration</h2>
+            <p>Configure your AI/LLM service for translations</p>
+          </div>
+
+          <div class="form-group">
+            <label for="api-provider">Translation Provider:</label>
+            <select id="api-provider" class="form-control">
+              <option value="custom">Custom API Endpoint</option>
+              <option value="openai">OpenAI GPT</option>
+              <option value="anthropic">Anthropic Claude</option>
+              <option value="cohere">Cohere</option>
+              <option value="huggingface">Hugging Face</option>
+            </select>
+            <small class="form-help">Choose your preferred AI translation service</small>
+          </div>
+
+          <div class="form-group">
+            <label for="api-endpoint">API Endpoint:</label>
+            <input
+              type="url"
+              id="api-endpoint"
+              class="form-control"
+              placeholder="https://api.openai.com/v1/chat/completions"
+              required
+            >
+            <small class="form-help">Enter the full API endpoint URL for your LLM service</small>
+          </div>
+
+          <div class="form-group">
+            <label for="api-key">API Key:</label>
+            <div class="input-group">
+              <input
+                type="password"
+                id="api-key"
+                class="form-control"
+                placeholder="Enter your API key"
+                required
+              >
+              <button type="button" id="toggle-api-key" class="btn-toggle">👁️</button>
+            </div>
+            <small class="form-help">Your API key will be stored securely in browser storage</small>
+          </div>
+
+          <div class="form-group">
+            <label for="model-name">Model Name:</label>
+            <input
+              type="text"
+              id="model-name"
+              class="form-control"
+              placeholder="gpt-3.5-turbo"
+            >
+            <small class="form-help">Specify the model to use (optional, provider-specific)</small>
+          </div>
+
+          <div class="form-group">
+            <button type="button" id="test-connection" class="btn-primary">
+              <span id="test-btn-text">Test Connection</span>
+              <div id="test-btn-spinner" class="spinner hidden"></div>
+            </button>
+            <div id="connection-status" class="connection-status hidden"></div>
+          </div>
+        </section>
+
+        <!-- Translation Settings Section -->
+        <section class="settings-section">
+          <div class="section-header">
+            <h2>🌍 Translation Settings</h2>
+            <p>Customize your translation preferences</p>
+          </div>
+
+          <div class="form-group">
+            <label for="default-target-language">Default Target Language:</label>
+            <select id="default-target-language" class="form-control">
+              <option value="en">English</option>
+              <option value="es">Spanish</option>
+              <option value="fr">French</option>
+              <option value="de">German</option>
+              <option value="it">Italian</option>
+              <option value="pt">Portuguese</option>
+              <option value="ru">Russian</option>
+              <option value="ja">Japanese</option>
+              <option value="ko">Korean</option>
+              <option value="zh">Chinese (Simplified)</option>
+              <option value="zh-tw">Chinese (Traditional)</option>
+              <option value="ar">Arabic</option>
+              <option value="hi">Hindi</option>
+              <option value="bn">Bengali</option>
+              <option value="ur">Urdu</option>
+              <option value="tr">Turkish</option>
+              <option value="pl">Polish</option>
+              <option value="nl">Dutch</option>
+              <option value="sv">Swedish</option>
+              <option value="da">Danish</option>
+              <option value="no">Norwegian</option>
+              <option value="fi">Finnish</option>
+            </select>
+            <small class="form-help">Language to translate to by default</small>
+          </div>
+
+          <div class="form-group">
+            <div class="checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="auto-detect-language">
+                <span class="checkmark"></span>
+                Auto-detect source language
+              </label>
+              <small class="form-help">Automatically detect the language of selected text</small>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <div class="checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="show-translation-overlay">
+                <span class="checkmark"></span>
+                Show translation overlay
+              </label>
+              <small class="form-help">Display translation results in an overlay on the page</small>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <div class="checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="preserve-formatting">
+                <span class="checkmark"></span>
+                Preserve text formatting
+              </label>
+              <small class="form-help">Maintain original text formatting in translations</small>
+            </div>
+          </div>
+        </section>
+
+        <!-- Advanced Settings Section -->
+        <section class="settings-section">
+          <div class="section-header">
+            <h2>⚙️ Advanced Settings</h2>
+            <p>Fine-tune extension behavior</p>
+          </div>
+
+          <div class="form-group">
+            <label for="max-tokens">Max Tokens:</label>
+            <input
+              type="number"
+              id="max-tokens"
+              class="form-control"
+              min="100"
+              max="4000"
+              value="2000"
+            >
+            <small class="form-help">Maximum number of tokens for translation responses</small>
+          </div>
+
+          <div class="form-group">
+            <label for="temperature">Temperature:</label>
+            <input
+              type="range"
+              id="temperature"
+              class="form-range"
+              min="0"
+              max="1"
+              step="0.1"
+              value="0.1"
+            >
+            <div class="range-labels">
+              <span>Precise (0)</span>
+              <span id="temperature-value">0.1</span>
+              <span>Creative (1)</span>
+            </div>
+            <small class="form-help">Controls translation creativity vs accuracy</small>
+          </div>
+
+          <div class="form-group">
+            <label for="request-timeout">Request Timeout (seconds):</label>
+            <input
+              type="number"
+              id="request-timeout"
+              class="form-control"
+              min="5"
+              max="60"
+              value="30"
+            >
+            <small class="form-help">How long to wait for translation responses</small>
+          </div>
+        </section>
+
+        <!-- Data & Privacy Section -->
+        <section class="settings-section">
+          <div class="section-header">
+            <h2>🔒 Data & Privacy</h2>
+            <p>Control how your data is handled</p>
+          </div>
+
+          <div class="form-group">
+            <div class="checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="save-translation-history">
+                <span class="checkmark"></span>
+                Save translation history locally
+              </label>
+              <small class="form-help">Keep a local history of your translations (stored in browser only)</small>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <button type="button" id="clear-history" class="btn-secondary">
+              Clear Translation History
+            </button>
+            <small class="form-help">Remove all saved translation history</small>
+          </div>
+
+          <div class="form-group">
+            <button type="button" id="export-settings" class="btn-secondary">
+              Export Settings
+            </button>
+            <small class="form-help">Download your settings as a JSON file</small>
+          </div>
+
+          <div class="form-group">
+            <label for="import-settings">Import Settings:</label>
+            <input type="file" id="import-settings" accept=".json" class="form-control">
+            <small class="form-help">Upload a previously exported settings file</small>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-content">
+        <div class="save-status">
+          <span id="save-status" class="save-status-text">Changes saved automatically</span>
+        </div>
+        <div class="footer-actions">
+          <button type="button" id="reset-settings" class="btn-secondary">Reset to Defaults</button>
+          <button type="button" id="save-settings" class="btn-primary">Save Settings</button>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

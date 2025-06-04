@@ -1,0 +1,254 @@
+/**
+ * Content CSS for AI Translation Extension
+ * Styles for translation UI elements injected into web pages
+ */
+
+/* Translation overlay styles */
+#ai-translate-overlay {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif !important;
+  font-size: 14px !important;
+  line-height: 1.4 !important;
+  color: #333 !important;
+  background: white !important;
+}
+
+#ai-translate-overlay * {
+  box-sizing: border-box !important;
+}
+
+#ai-translate-overlay .translation-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding: 16px 20px !important;
+  border-bottom: 1px solid #eee !important;
+  background: #f8f9fa !important;
+}
+
+#ai-translate-overlay .translation-header h3 {
+  margin: 0 !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  color: #333 !important;
+}
+
+#ai-translate-overlay .close-btn {
+  background: none !important;
+  border: none !important;
+  font-size: 24px !important;
+  cursor: pointer !important;
+  color: #666 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 30px !important;
+  height: 30px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 4px !important;
+  transition: all 0.2s ease !important;
+}
+
+#ai-translate-overlay .close-btn:hover {
+  background: #e9ecef !important;
+  color: #333 !important;
+}
+
+#ai-translate-overlay .translation-content {
+  padding: 20px !important;
+  max-height: 300px !important;
+  overflow-y: auto !important;
+}
+
+#ai-translate-overlay .original-text,
+#ai-translate-overlay .translated-text {
+  margin-bottom: 20px !important;
+}
+
+#ai-translate-overlay .original-text:last-child,
+#ai-translate-overlay .translated-text:last-child {
+  margin-bottom: 0 !important;
+}
+
+#ai-translate-overlay h4 {
+  margin: 0 0 8px 0 !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #666 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+#ai-translate-overlay p {
+  margin: 0 !important;
+  padding: 12px !important;
+  background: #f8f9fa !important;
+  border-radius: 6px !important;
+  border-left: 3px solid #4A90E2 !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+  color: #333 !important;
+}
+
+#ai-translate-overlay .translated-text p {
+  border-left-color: #28a745 !important;
+}
+
+#ai-translate-overlay .translation-actions {
+  padding: 16px 20px !important;
+  border-top: 1px solid #eee !important;
+  background: #f8f9fa !important;
+  display: flex !important;
+  gap: 12px !important;
+}
+
+#ai-translate-overlay .translation-actions button {
+  background: #4A90E2 !important;
+  color: white !important;
+  border: none !important;
+  padding: 10px 16px !important;
+  border-radius: 6px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  flex: 1 !important;
+}
+
+#ai-translate-overlay .translation-actions button:hover {
+  background: #357ABD !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+
+#ai-translate-overlay .copy-btn {
+  background: #28a745 !important;
+}
+
+#ai-translate-overlay .copy-btn:hover {
+  background: #218838 !important;
+}
+
+/* Translation button styles */
+#ai-translate-button {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif !important;
+  animation: fadeInScale 0.2s ease-out !important;
+}
+
+#ai-translate-button:active {
+  transform: scale(0.95) !important;
+}
+
+/* Loading indicator styles */
+#ai-translate-loading {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif !important;
+  animation: slideInRight 0.3s ease-out !important;
+}
+
+/* Animations */
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Notification styles */
+.ai-translate-notification {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif !important;
+  animation: fadeIn 0.3s ease-out !important;
+}
+
+/* Error message styles */
+.ai-translate-error {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif !important;
+  animation: fadeIn 0.3s ease-out !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  #ai-translate-overlay {
+    width: calc(100vw - 40px) !important;
+    right: 20px !important;
+    left: 20px !important;
+    max-width: none !important;
+  }
+
+  #ai-translate-overlay .translation-actions {
+    flex-direction: column !important;
+  }
+
+  #ai-translate-overlay .translation-actions button {
+    flex: none !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  #ai-translate-overlay {
+    border: 2px solid #000 !important;
+  }
+
+  #ai-translate-overlay .translation-header,
+  #ai-translate-overlay .translation-actions {
+    background: #fff !important;
+    border-color: #000 !important;
+  }
+
+  #ai-translate-overlay p {
+    background: #fff !important;
+    border: 1px solid #000 !important;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  #ai-translate-button,
+  #ai-translate-loading,
+  .ai-translate-notification,
+  .ai-translate-error {
+    animation: none !important;
+  }
+
+  #ai-translate-overlay .close-btn,
+  #ai-translate-overlay .translation-actions button {
+    transition: none !important;
+  }
+}
+
+/* Print styles */
+@media print {
+  #ai-translate-button,
+  #ai-translate-overlay,
+  #ai-translate-loading,
+  .ai-translate-notification,
+  .ai-translate-error {
+    display: none !important;
+  }
+}
