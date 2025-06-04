@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Translation Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        h1, h2, h3 {
+            color: #333;
+        }
+        .highlight {
+            background: #f0f8ff;
+            padding: 10px;
+            border-left: 4px solid #4a90e2;
+            margin: 15px 0;
+        }
+        .quote {
+            font-style: italic;
+            border-left: 3px solid #ccc;
+            padding-left: 15px;
+            margin: 20px 0;
+        }
+        ul, ol {
+            margin: 15px 0;
+        }
+        li {
+            margin: 8px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>AI Translation Extension Test Page</h1>
+
+    <div class="section">
+        <h2>Welcome Section</h2>
+        <p>This is a test page designed to demonstrate the AI Translation Extension's new progress tracking features. When you translate this page, you'll see real-time progress updates and visual highlighting of elements being translated.</p>
+
+        <div class="highlight">
+            <strong>Key Features:</strong> The extension now shows which elements are currently being translated with a subtle blue pulse, and completed translations are highlighted in green with different colors for each batch.
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Sample Content</h2>
+        <p>Here are various types of content to translate:</p>
+
+        <h3>Short Paragraphs</h3>
+        <p>This is the first paragraph with some sample text.</p>
+        <p>This is the second paragraph with different content.</p>
+        <p>This is the third paragraph to demonstrate batch processing.</p>
+
+        <h3>Lists and Items</h3>
+        <ul>
+            <li>First list item with some text</li>
+            <li>Second list item with more content</li>
+            <li>Third list item for variety</li>
+            <li>Fourth list item to show grouping</li>
+            <li>Fifth list item in the same batch</li>
+        </ul>
+
+        <ol>
+            <li>Numbered item one</li>
+            <li>Numbered item two</li>
+            <li>Numbered item three</li>
+        </ol>
+    </div>
+
+    <div class="section">
+        <h2>Longer Content</h2>
+        <p>This section contains longer paragraphs to test how the translation system handles more substantial text blocks. The progress tracking should show these elements being processed in batches, with clear visual feedback about which elements are currently being translated and which have been completed.</p>
+
+        <div class="quote">
+            "The best way to test a translation system is to provide it with diverse content that includes different text structures, lengths, and formatting. This helps ensure that the progress tracking works correctly across various scenarios."
+        </div>
+
+        <p>Each batch of elements will be highlighted with a different color border when completed, allowing you to see which elements were translated together in a single API call. This makes it easy to understand the batching strategy and see the translation progress in real-time.</p>
+    </div>
+
+    <div class="section">
+        <h2>Technical Details</h2>
+        <p>The extension processes text elements in batches of 5 to be respectful to the API rate limits. You can observe this behavior through:</p>
+
+        <ul>
+            <li>The progress overlay in the top-right corner of the page</li>
+            <li>The progress display in the extension popup</li>
+            <li>The visual highlighting of elements being processed</li>
+            <li>The color-coded borders showing batch groupings</li>
+        </ul>
+
+        <h3>Visual Indicators</h3>
+        <p>Blue pulsing background: Element currently being translated</p>
+        <p>Green background with colored border: Element successfully translated</p>
+        <p>Different border colors: Different batches (up to 5 colors cycle)</p>
+    </div>
+
+    <div class="section">
+        <h2>Instructions</h2>
+        <p>To test the progress tracking features:</p>
+        <ol>
+            <li>Make sure your API is configured in the extension options</li>
+            <li>Open the extension popup</li>
+            <li>Click "Translate Page" button</li>
+            <li>Watch the progress indicators and element highlighting</li>
+            <li>Observe how elements are grouped by batch colors</li>
+        </ol>
+
+        <p>The popup will show real-time progress including the number of elements completed, current batch being processed, and overall percentage complete.</p>
+    </div>
+</body>
+</html>

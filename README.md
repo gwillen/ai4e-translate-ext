@@ -4,10 +4,14 @@ A Firefox extension that provides intelligent translation of web content using L
 
 ## 🌟 Features
 
-- **Smart Text Selection**: Select any text on a webpage and translate it instantly
-- **Multiple LLM Support**: Works with OpenAI GPT, Anthropic Claude, and custom API endpoints
+- **Smart Text Selection**: Select any text on a webpage and translate it instantly with in-place replacement
+- **Full Page Translation**: Translate entire web pages with visual progress tracking and batch processing
+- **Real-time Progress Tracking**: See translation progress with element highlighting and batch visualization
+- **Visual Feedback**: Elements being translated show a subtle blue pulse, completed translations are highlighted in green
+- **Batch Processing Visualization**: Color-coded borders show which elements were translated together
+- **OpenAI Integration**: Uses OpenAI's powerful language models for high-quality translations
 - **Context Menu Integration**: Right-click to translate selected text or entire pages
-- **Quick Translation Popup**: Translate text directly from the extension popup
+- **Quick Translation Popup**: Translate text directly from the extension popup with progress updates
 - **Multiple Languages**: Support for dozens of languages including English, Spanish, French, German, Japanese, Chinese, Arabic, and more
 - **Customizable Settings**: Configure API endpoints, default languages, and translation preferences
 - **Privacy-Focused**: Your API keys are stored locally in your browser
@@ -74,15 +78,26 @@ After installation, you need to configure your AI service:
 ### Text Selection Translation
 
 1. **Select any text** on a webpage
-2. **Click the translate button** that appears near your selection
-3. **View the translation** in the overlay that appears
-4. **Copy or replace** the original text with the translation
+2. **Right-click and choose "Translate Selected Text"**
+3. **The selected text is automatically replaced** with the translation in-place
+
+### Full Page Translation
+
+1. **Right-click anywhere on the page** and choose **"Translate Entire Page"**
+   - OR click the extension icon and select **"Translate Page"**
+2. **Watch the real-time progress** with visual indicators:
+   - **Progress overlay** appears in the top-right corner showing completion status
+   - **Extension popup** displays detailed progress with batch information
+   - **Elements being translated** show a subtle blue pulsing background
+   - **Completed elements** are highlighted with green background and colored borders
+3. **Observe batch groupings** - elements translated together have matching border colors
+4. **Translation completes automatically** with all text replaced in-place
 
 ### Context Menu Translation
 
 1. **Right-click on selected text** or anywhere on the page
 2. **Choose "Translate Selected Text"** or **"Translate Entire Page"**
-3. **View the results** in the translation overlay
+3. **View real-time progress** and automatic text replacement
 
 ### Quick Translation
 
@@ -187,13 +202,15 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📊 Roadmap
 
-- [ ] **Page translation**: Full webpage translation with layout preservation
+- [x] **Page translation**: Full webpage translation with visual progress tracking ✅
+- [x] **Batch processing**: Intelligent batching with visual feedback ✅
 - [ ] **Translation history**: Browse and manage previous translations
 - [ ] **Offline support**: Cache frequently translated phrases
 - [ ] **Custom prompts**: User-defined translation prompts
-- [ ] **Batch translation**: Translate multiple text selections at once
 - [ ] **Language learning mode**: Enhanced features for language learners
 - [ ] **Integration with other services**: Support for more AI providers
+- [ ] **Translation memory**: Remember and reuse previous translations
+- [ ] **Keyboard shortcuts**: Quick access to translation features
 
 ---
 
