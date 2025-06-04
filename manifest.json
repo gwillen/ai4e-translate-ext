@@ -4,6 +4,12 @@
   "version": "1.0.0",
   "description": "Translate web page content using AI/LLM technology",
 
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "ai-translation-demo@extensions.nerdnet.org"
+    }
+  },
+
   "permissions": [
     "activeTab",
     "storage",
