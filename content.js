@@ -133,6 +133,110 @@ function hideLoadingIndicator() {
 }
 
 /**
+ * Show progress indicator for page translation
+ */
+function showProgressIndicator(totalElements, targetLanguage) {
+  hideProgressIndicator(); // Remove any existing indicator
+
+  const progressDiv = document.createElement('div');
+  progressDiv.id = 'ai-translate-progress';
+  progressDiv.innerHTML = `
+    <div class="progress-header">
+      <span>🌐</span>
+      <span>Translating to ${targetLanguage.toUpperCase()}</span>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill"></div>
+    </div>
+    <div class="progress-text">
+      <span><span id="progress-completed">0</span> of <span id="progress-total">${totalElements}</span> elements</span>
+      <span id="progress-percentage">0%</span>
+    </div>
+    <div class="current-batch" id="current-batch-info">Preparing translation...</div>
+  `;
+
+  document.body.appendChild(progressDiv);
+
+  // Send initial progress to popup
+  browser.runtime.sendMessage({
+    action: 'updateTranslationProgress',
+    progress: {
+      completed: 0,
+      total: totalElements,
+      percentage: 0,
+      currentBatch: 1,
+      totalBatches: Math.ceil(totalElements / 5),
+      isTranslating: true
+    }
+  }).catch(() => {}); // Ignore if popup is closed
+}
+
+/**
+ * Update progress indicator
+ */
+function updateProgress(completed, total, currentBatch, totalBatches, currentBatchNodes) {
+  const progressDiv = document.getElementById('ai-translate-progress');
+  if (!progressDiv) return;
+
+  const percentage = Math.round((completed / total) * 100);
+
+  // Update progress bar
+  const progressFill = progressDiv.querySelector('.progress-fill');
+  progressFill.style.width = percentage + '%';
+
+  // Update text
+  const completedSpan = progressDiv.querySelector('#progress-completed');
+  const percentageSpan = progressDiv.querySelector('#progress-percentage');
+  const batchInfo = progressDiv.querySelector('#current-batch-info');
+
+  completedSpan.textContent = completed;
+  percentageSpan.textContent = percentage + '%';
+
+  if (currentBatch <= totalBatches) {
+    const batchElementCount = currentBatchNodes ? currentBatchNodes.length : 0;
+    batchInfo.textContent = `Processing batch ${currentBatch} of ${totalBatches} (${batchElementCount} elements)`;
+  } else {
+    batchInfo.textContent = 'Translation complete!';
+  }
+
+  // Send progress to popup
+  browser.runtime.sendMessage({
+    action: 'updateTranslationProgress',
+    progress: {
+      completed,
+      total,
+      percentage,
+      currentBatch,
+      totalBatches,
+      isTranslating: currentBatch <= totalBatches
+    }
+  }).catch(() => {}); // Ignore if popup is closed
+}
+
+/**
+ * Hide progress indicator
+ */
+function hideProgressIndicator() {
+  const progressDiv = document.getElementById('ai-translate-progress');
+  if (progressDiv) {
+    progressDiv.remove();
+  }
+
+  // Send completion message to popup
+  browser.runtime.sendMessage({
+    action: 'updateTranslationProgress',
+    progress: {
+      completed: 0,
+      total: 0,
+      percentage: 0,
+      currentBatch: 0,
+      totalBatches: 0,
+      isTranslating: false
+    }
+  }).catch(() => {}); // Ignore if popup is closed
+}
+
+/**
  * Show translation result
  * @param {Object} result - Translation result
  */
@@ -308,7 +412,7 @@ function handleMessage(message) {
  */
 async function translateEntirePage() {
   console.log('Starting full page translation...');
-  showLoadingIndicator();
+  hideLoadingIndicator(); // Hide the basic loading indicator
 
   try {
     // Get target language from options
@@ -319,18 +423,47 @@ async function translateEntirePage() {
     const textNodes = getTextNodes(document.body);
     console.log(`Found ${textNodes.length} text nodes to translate`);
 
+    // Filter and prepare translatable nodes
+    const translatableNodes = textNodes.filter(node => {
+      const text = node.textContent.trim();
+      return text.length >= 3 && !/^[\d\s\p{P}]+$/u.test(text);
+    });
+
+    console.log(`${translatableNodes.length} nodes are translatable`);
+
+    if (translatableNodes.length === 0) {
+      showNotification('No translatable text found on this page');
+      return;
+    }
+
+    // Calculate batches
+    const batchSize = 5;
+    const totalBatches = Math.ceil(translatableNodes.length / batchSize);
+
+    // Show progress indicator
+    showProgressIndicator(translatableNodes.length, targetLanguage);
+
     let translatedCount = 0;
+    let batchIndex = 0;
 
-    // Translate text nodes in batches to avoid overwhelming the API
-    for (let i = 0; i < textNodes.length; i += 5) {
-      const batch = textNodes.slice(i, i + 5);
-      const promises = batch.map(async (node) => {
-        const text = node.textContent.trim();
+    // Translate text nodes in batches
+    for (let i = 0; i < translatableNodes.length; i += batchSize) {
+      const batch = translatableNodes.slice(i, i + batchSize);
 
-        // Skip very short text, numbers only, or mostly punctuation
-        if (text.length < 3 || /^[\d\s\p{P}]+$/u.test(text)) {
-          return;
+      // Update progress
+      updateProgress(translatedCount, translatableNodes.length, batchIndex + 1, totalBatches, batch);
+
+      // Highlight current batch being translated
+      batch.forEach(node => {
+        const element = node.parentElement;
+        if (element) {
+          element.classList.add('ai-translating');
         }
+      });
+
+      // Translate the batch
+      const promises = batch.map(async (node, nodeIndex) => {
+        const text = node.textContent.trim();
 
         try {
           const response = await browser.runtime.sendMessage({
@@ -341,29 +474,61 @@ async function translateEntirePage() {
 
           if (!response.error && response.translatedText) {
             node.textContent = response.translatedText;
+
+            // Update element styling
+            const element = node.parentElement;
+            if (element) {
+              element.classList.remove('ai-translating');
+              element.classList.add('ai-translated', `batch-${batchIndex % 5}`);
+
+              // Store batch info for grouping
+              element.setAttribute('data-translation-batch', batchIndex.toString());
+            }
+
             translatedCount++;
+
+            // Update progress in real-time
+            updateProgress(translatedCount, translatableNodes.length, batchIndex + 1, totalBatches, batch);
+          } else {
+            // Remove translating class if translation failed
+            const element = node.parentElement;
+            if (element) {
+              element.classList.remove('ai-translating');
+            }
           }
         } catch (error) {
           console.error('Failed to translate text node:', error);
+
+          // Remove translating class if translation failed
+          const element = node.parentElement;
+          if (element) {
+            element.classList.remove('ai-translating');
+          }
         }
       });
 
       // Wait for current batch to complete before processing next batch
       await Promise.all(promises);
 
+      batchIndex++;
+
       // Small delay between batches to be respectful to the API
-      if (i + 5 < textNodes.length) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+      if (i + batchSize < translatableNodes.length) {
+        await new Promise(resolve => setTimeout(resolve, 800));
       }
     }
 
-    hideLoadingIndicator();
-    showNotification(`Page translated! ${translatedCount} text elements translated to ${targetLanguage}`);
+    // Hide progress indicator after completion
+    setTimeout(() => {
+      hideProgressIndicator();
+    }, 3000);
+
+    showNotification(`Page translation complete! ${translatedCount} elements translated to ${targetLanguage}`);
     console.log(`Page translation completed. Translated ${translatedCount} elements.`);
 
   } catch (error) {
     console.error('Page translation failed:', error);
-    hideLoadingIndicator();
+    hideProgressIndicator();
     showError('Page translation failed. Please check your API configuration.');
   }
 }

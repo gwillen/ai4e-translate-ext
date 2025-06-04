@@ -242,13 +242,149 @@
   }
 }
 
+/* Translation progress highlighting */
+.ai-translating {
+  background: linear-gradient(90deg, rgba(74, 144, 226, 0.1) 0%, rgba(74, 144, 226, 0.05) 100%) !important;
+  border-left: 2px solid rgba(74, 144, 226, 0.3) !important;
+  padding-left: 4px !important;
+  animation: translatePulse 2s ease-in-out infinite !important;
+  transition: all 0.3s ease !important;
+}
+
+.ai-translated {
+  background: linear-gradient(90deg, rgba(40, 167, 69, 0.08) 0%, rgba(40, 167, 69, 0.03) 100%) !important;
+  border-left: 2px solid rgba(40, 167, 69, 0.25) !important;
+  padding-left: 4px !important;
+  transition: all 0.3s ease !important;
+}
+
+/* Batch color variations for translated elements */
+.ai-translated.batch-0 { border-left-color: rgba(40, 167, 69, 0.4) !important; }
+.ai-translated.batch-1 { border-left-color: rgba(74, 144, 226, 0.4) !important; }
+.ai-translated.batch-2 { border-left-color: rgba(156, 39, 176, 0.4) !important; }
+.ai-translated.batch-3 { border-left-color: rgba(255, 152, 0, 0.4) !important; }
+.ai-translated.batch-4 { border-left-color: rgba(233, 30, 99, 0.4) !important; }
+
+@keyframes translatePulse {
+  0%, 100% {
+    background: linear-gradient(90deg, rgba(74, 144, 226, 0.1) 0%, rgba(74, 144, 226, 0.05) 100%);
+    border-left-color: rgba(74, 144, 226, 0.3);
+  }
+  50% {
+    background: linear-gradient(90deg, rgba(74, 144, 226, 0.15) 0%, rgba(74, 144, 226, 0.08) 100%);
+    border-left-color: rgba(74, 144, 226, 0.5);
+  }
+}
+
+/* Progress overlay */
+#ai-translate-progress {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 10001;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+  font-size: 14px;
+  min-width: 250px;
+  backdrop-filter: blur(4px);
+}
+
+#ai-translate-progress .progress-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-weight: 600;
+  color: #333;
+}
+
+#ai-translate-progress .progress-bar {
+  width: 100%;
+  height: 6px;
+  background: #e9ecef;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+#ai-translate-progress .progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4A90E2, #357ABD);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+  width: 0%;
+}
+
+#ai-translate-progress .progress-text {
+  font-size: 12px;
+  color: #666;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#ai-translate-progress .current-batch {
+  font-size: 11px;
+  color: #4A90E2;
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+/* Dark mode support for progress elements */
+@media (prefers-color-scheme: dark) {
+  .ai-translating {
+    background: linear-gradient(90deg, rgba(74, 144, 226, 0.15) 0%, rgba(74, 144, 226, 0.08) 100%) !important;
+    border-left-color: rgba(74, 144, 226, 0.4) !important;
+  }
+
+  .ai-translated {
+    background: linear-gradient(90deg, rgba(40, 167, 69, 0.12) 0%, rgba(40, 167, 69, 0.06) 100%) !important;
+    border-left-color: rgba(40, 167, 69, 0.35) !important;
+  }
+
+  #ai-translate-progress {
+    background: rgba(45, 45, 45, 0.95);
+    border-color: #555;
+    color: #e8e8e8;
+  }
+
+  #ai-translate-progress .progress-header {
+    color: #e8e8e8;
+  }
+
+  #ai-translate-progress .progress-bar {
+    background: #555;
+  }
+
+  #ai-translate-progress .progress-text {
+    color: #ccc;
+  }
+
+  #ai-translate-progress .current-batch {
+    color: #6bb6ff;
+  }
+}
+
 /* Print styles */
 @media print {
   #ai-translate-button,
   #ai-translate-overlay,
   #ai-translate-loading,
   .ai-translate-notification,
-  .ai-translate-error {
+  .ai-translate-error,
+  #ai-translate-progress {
     display: none !important;
+  }
+
+  .ai-translating,
+  .ai-translated {
+    background: none !important;
+    border: none !important;
+    padding-left: 0 !important;
+    animation: none !important;
   }
 }

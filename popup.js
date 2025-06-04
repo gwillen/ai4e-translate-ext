@@ -41,6 +41,9 @@ function initializePopup() {
   // Add event listeners
   addEventListeners();
 
+  // Listen for progress messages from content scripts
+  browser.runtime.onMessage.addListener(handleRuntimeMessage);
+
   // Load initial state
   loadInitialState();
 }
@@ -280,6 +283,51 @@ function showTranslationResult(result) {
  */
 function hideTranslationResult() {
   elements.translationResult.classList.add('hidden');
+}
+
+/**
+ * Update translation progress display
+ */
+function updateTranslationProgress(progress) {
+  const progressContainer = document.getElementById('translation-progress');
+
+  if (!progressContainer) {
+    console.warn('Progress container not found');
+    return;
+  }
+
+  if (!progress.isTranslating) {
+    // Hide progress when translation is complete
+    progressContainer.classList.add('hidden');
+    return;
+  }
+
+  // Show progress container
+  progressContainer.classList.remove('hidden');
+
+  // Update progress elements
+  const progressFill = progressContainer.querySelector('.progress-fill');
+  const progressPercentage = progressContainer.querySelector('.progress-percentage');
+  const progressText = progressContainer.querySelector('.progress-text');
+  const batchInfo = progressContainer.querySelector('.batch-info');
+
+  if (progressFill) progressFill.style.width = progress.percentage + '%';
+  if (progressPercentage) progressPercentage.textContent = progress.percentage + '%';
+  if (progressText) progressText.textContent = `${progress.completed} of ${progress.total} elements`;
+  if (batchInfo) batchInfo.textContent = `Batch ${progress.currentBatch} of ${progress.totalBatches}`;
+}
+
+/**
+ * Handle messages from content scripts or background script
+ */
+function handleRuntimeMessage(message, sender, sendResponse) {
+  console.log('Popup received message:', message);
+
+  switch (message.action) {
+    case 'updateTranslationProgress':
+      updateTranslationProgress(message.progress);
+      break;
+  }
 }
 
 /**

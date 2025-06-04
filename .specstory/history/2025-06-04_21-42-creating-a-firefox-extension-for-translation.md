@@ -4000,3 +4000,220 @@ Cool, thanks. A few more things:
 
 ---
 
+_**Assistant**_
+
+
+
+---
+
+Great feedback! Let's address each of these issues one by one. I'll start by making the necessary changes:
+
+## 1. First, let's simplify the API to focus on OpenAI and fix the in-place text replacement:
+
+---
+
+
+
+---
+
+## 2. Now let's update the content script to remove the automatic popup and make translation replace text in-place:
+
+---
+
+
+
+---
+
+
+
+---
+
+
+
+---
+
+
+
+---
+
+
+
+---
+
+## 3. Now let's add a "Translate Page" button to the popup and improve dark mode support:
+
+---
+
+
+
+---
+
+
+
+---
+
+
+
+---
+
+
+
+---
+
+Now let's improve the dark mode contrast issues:
+
+---
+
+
+
+---
+
+## 4. Now let's update the popup.js to handle the page translation button:
+
+---
+
+
+
+---
+
+
+
+---
+
+
+
+---
+
+
+
+---
+
+Now let's add the handleTranslatePage function:
+
+---
+
+
+
+---
+
+Now let's add the loading state function for the page translation button:
+
+---
+
+
+
+---
+
+## 5. Finally, let's update the options page to focus on OpenAI:
+
+---
+
+
+
+---
+
+
+
+---
+
+
+
+---
+
+
+
+---
+
+Now let's commit all these changes:
+
+---
+
+```bash
+git add -A
+```
+
+```
+gwillen@quokka:~/src/ai4e-translate-ext$ 
+
+```
+
+---
+
+Model provided invalid arguments to terminal tool.
+
+---
+
+```bash
+git commit -m "Major improvements: OpenAI focus, in-place translation, page translation, better dark mode"
+```
+
+```
+gwillen@quokka:~/src/ai4e-translate-ext$ git commit -m "Major improvements: OpenAI focus, in-pl
+ace translation, page translation, bettergit commit -m "Major improvements: OpenAI focus, in-pl
+ace translation, page translation, better dark mode"
+[master b4de7ea] Major improvements: OpenAI focus, in-place translation, page translation, bett
+er dark mode
+ 8 files changed, 1031 insertions(+), 140 deletions(-)
+gwillen@quokka:~/src/ai4e-translate-ext$
+```
+
+---
+
+Perfect! 🎉 I've successfully implemented all your requested changes:
+
+## ✅ **All Issues Fixed:**
+
+### 1. **API Simplified to OpenAI Focus**
+- Removed Anthropic and other providers to avoid complexity
+- Focused on OpenAI API format only
+- Updated default settings to use OpenAI endpoint
+- Simplified options page to just OpenAI vs Custom OpenAI-compatible
+
+### 2. **In-Place Text Replacement**
+- **Text selection translation now replaces the original text directly** instead of showing popups
+- When you select text and use "Translate Selected Text" from context menu, it automatically replaces the selection
+- Shows a simple notification confirming the translation
+
+### 3. **Full Page Translation Button**
+- **Added "Translate Page" button to the popup interface**
+- Intelligently finds and translates all text content on the page
+- Processes in batches to be respectful to the API
+- Skips code blocks, scripts, and other non-translatable content
+- Shows progress and completion notifications
+
+### 4. **Removed Automatic Translation Popup**
+- **No more automatic popup when selecting text**
+- **Only context menu option remains** (right-click → "Translate Selected Text")
+- Much cleaner, less intrusive user experience
+
+### 5. **Fixed Dark Mode Contrast Issues**
+- **Significantly improved contrast** for dark mode users
+- Better text colors (#e8e8e8 instead of #e0e0e0)
+- Improved form field visibility and focus states
+- Enhanced button contrast and hover states
+- Better status indicators and help text readability
+
+## 🚀 **How to Use the Updated Extension:**
+
+1. **Text Translation:** Select text → Right-click → "Translate Selected Text" → Text is replaced in-place
+2. **Page Translation:** Click extension icon → "Translate Page" button → Entire page gets translated
+3. **Quick Translation:** Click extension icon → Type text → "Translate Text" → See result in popup
+
+## 🔧 **Ready to Test:**
+
+The extension is now ready to load in Firefox with all your requested improvements! It should provide a much better user experience with:
+- Cleaner UI without intrusive popups
+- Better dark mode support
+- Full page translation capability
+- Streamlined OpenAI-focused API configuration
+
+Would you like to test it out or make any other adjustments?
+
+---
+
+_**User**_
+
+I like how the whole-page translation works chunk-by-chunk. I would like to see some more information about that on the page -- the popup should show how many chunks there are to translate, and give a realtime update of how many have been completed. As a given chunk / element is being translated, I would like it to be subtly highlighted in some non-intrusive way, to show that we're working on it; and once the result gets back, I would like translated elements/chunks to be highlighted in some different non-intrusive way. I'd like for translated or in-translation pieces to be highlighted in such a way that I can see which pieces were translated together as one call to the AI.
+
+---
+

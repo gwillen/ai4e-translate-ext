@@ -104,6 +104,12 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
           sendResponse({ error: error.message });
         });
       return true; // Will respond asynchronously
+
+    case 'updateTranslationProgress':
+      // Forward progress updates to popup if it's open
+      forwardProgressToPopup(message);
+      sendResponse({ success: true });
+      return false; // Respond synchronously
   }
 });
 
@@ -136,6 +142,20 @@ async function getStoredOptions() {
   } catch (error) {
     console.error('Error retrieving options:', error);
     return {};
+  }
+}
+
+/**
+ * Forward progress updates to popup
+ * @param {Object} message - Progress message from content script
+ */
+async function forwardProgressToPopup(message) {
+  try {
+    // Try to send message to popup
+    await browser.runtime.sendMessage(message);
+  } catch (error) {
+    // Ignore if popup is closed - this is expected behavior
+    console.log('Could not forward progress to popup (popup may be closed)');
   }
 }
 
