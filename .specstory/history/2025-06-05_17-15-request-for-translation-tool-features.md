@@ -899,7 +899,37 @@ function validateCoverage(originalTextNodes, semanticGroups) {
 }
 ```
 
-## 🛡️ Edge
+## 🛡️ Edge Case Handling
+
+**Orphaned Text:** Text nodes with no clear semantic parent
+```html
+<div>Some orphaned text <p>Paragraph</p> more orphaned text</div>
+```
+**Solution:** Group orphaned text with nearest semantic container or create synthetic blocks.
+
+**Mixed Content:** Block elements containing both text and other blocks
+```html
+<div>Intro text <p>Paragraph</p> conclusion text</div>
+```
+**Solution:** Split into multiple translation units or promote container to semantic block.
+
+This approach ensures we can **prove mathematically** that every visible text node is translated exactly once, while gaining the benefits of semantic block translation. Sound good?
+
+---
+
+_**User**_
+
+I have made some changes in how we chunk and group text, but this leaves some things in a broken state. I would like to use the weakmap storage scheme as you discussed above. Can you please fix the translateBatch function in content.js to use this approach instead of the data- attributes, and then find and fix wherever else this needs to be updated?
+
+---
+
+_**Assistant**_
+
+
+
+---
+
+
 
 ---
 

@@ -22,6 +22,13 @@ let translationRequestCount = 0;
 let autoPauseAfterRequests = 0; // 0 means never pause
 let pauseResumeButton = null;
 
+// WeakMap storage for translation metadata (avoids DOM attribute conflicts)
+const originalTextMap = new WeakMap();
+const translatedTextMap = new WeakMap();
+const targetLanguageMap = new WeakMap();
+const requestIdMap = new WeakMap();
+const chunkIndexMap = new WeakMap();
+
 // Logging system for debugging
 const Logger = {
   debug: (message, ...args) => {
@@ -718,12 +725,12 @@ async function translateBatch(chunk, targetLanguage, chunkIndex, translationMode
           element.classList.remove('ai-translating');
           element.classList.add('ai-translated', `chunk-${chunkIndex % 5}`, 'ai-hover-enabled');
 
-          // Store translation data for re-translation features
-          element.setAttribute('data-translation-chunk', chunkIndex.toString());
-          element.setAttribute('data-original-text', originalText.trim());
-          element.setAttribute('data-translated-text', trimmedTranslation);
-          element.setAttribute('data-target-language', targetLanguage);
-          element.setAttribute('data-request-id', requestId);
+          // Store translation data using WeakMaps to avoid DOM attribute conflicts
+          originalTextMap.set(element, originalText.trim());
+          translatedTextMap.set(element, trimmedTranslation);
+          targetLanguageMap.set(element, targetLanguage);
+          requestIdMap.set(element, requestId);
+          chunkIndexMap.set(element, chunkIndex);
         }
       } else {
         // Remove translating class if translation failed
@@ -958,7 +965,7 @@ async function translateEntirePage(translationMode = 'natural') {
 function handleTranslatedElementClick(event) {
   const element = event.target.closest('.ai-hover-enabled');
 
-  if (element && element.hasAttribute('data-original-text')) {
+  if (element && originalTextMap.has(element)) {
     event.preventDefault();
     event.stopPropagation();
     showTranslationMenu(element, event.clientX, event.clientY);
@@ -972,9 +979,9 @@ function showTranslationMenu(element, x, y) {
   // Remove any existing menu
   hideTranslationMenu();
 
-  const originalText = element.getAttribute('data-original-text');
-  const translatedText = element.getAttribute('data-translated-text');
-  const targetLanguage = element.getAttribute('data-target-language');
+  const originalText = originalTextMap.get(element);
+  const translatedText = translatedTextMap.get(element);
+  const targetLanguage = targetLanguageMap.get(element);
 
   const menu = document.createElement('div');
   menu.id = 'ai-translation-menu';
@@ -1059,10 +1066,13 @@ async function handleTranslationAction(element, action, originalText, targetLang
     if (textNode) {
       textNode.textContent = originalText;
       element.classList.remove('ai-translated', 'ai-hover-enabled');
-      element.removeAttribute('data-original-text');
-      element.removeAttribute('data-translated-text');
-      element.removeAttribute('data-target-language');
-      element.removeAttribute('data-translation-batch');
+
+      // Clear WeakMap storage
+      originalTextMap.delete(element);
+      translatedTextMap.delete(element);
+      targetLanguageMap.delete(element);
+      requestIdMap.delete(element);
+      chunkIndexMap.delete(element);
     }
     showNotification('Original text restored');
     return;
@@ -1087,7 +1097,7 @@ async function handleTranslationAction(element, action, originalText, targetLang
         const textNode = getFirstTextNode(element);
         if (textNode) {
           textNode.textContent = response.translatedText;
-          element.setAttribute('data-translated-text', response.translatedText);
+          translatedTextMap.set(element, response.translatedText);
         }
         showNotification('Translation updated');
       } else {
@@ -1121,7 +1131,7 @@ async function handleTranslationAction(element, action, originalText, targetLang
         const textNode = getFirstTextNode(element);
         if (textNode) {
           textNode.textContent = response.translatedText;
-          element.setAttribute('data-translated-text', response.translatedText);
+          translatedTextMap.set(element, response.translatedText);
         }
         showNotification(`Translation updated (${action} style)`);
       } else {
@@ -1228,6 +1238,25 @@ async function handleMutations(mutations) {
       }
     }
   }
+}
+
+/**
+ * Get the first text node within an element
+ * @param {Element} element - Element to search
+ * @returns {Text|null} First text node or null if none found
+ */
+function getFirstTextNode(element) {
+  const walker = document.createTreeWalker(
+    element,
+    NodeFilter.SHOW_TEXT,
+    {
+      acceptNode: function(node) {
+        return node.textContent.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+      }
+    }
+  );
+
+  return walker.nextNode();
 }
 
 /**
