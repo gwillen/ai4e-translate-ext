@@ -5178,3 +5178,244 @@ _**Assistant**_
 
 ---
 
+Excellent suggestions! These will make the extension much more powerful and debuggable. Let me implement these features systematically:
+
+## 1. Forward Logs to Page Console
+
+First, let's create a logging system that forwards logs from background to content script:
+
+---
+
+
+
+---
+
+Now let's update the background script to forward logs to the content script:
+
+---
+
+
+
+---
+
+Add log message handling to the content script:
+
+---
+
+
+
+---
+
+## 2. Add Stop Button to On-Page Progress Box
+
+---
+
+
+
+---
+
+Add dark mode support for the stop button:
+
+---
+
+
+
+---
+
+Update the progress indicator to include the stop button:
+
+---
+
+
+
+---
+
+## 3. Add Detailed Logging for Translation Requests
+
+Let's update the translation function to include detailed logging with unique IDs:
+
+---
+
+
+
+---
+
+Now let's add the getSurroundingContext function:
+
+---
+
+
+
+---
+
+Now let's add logging for the response and final text:
+
+---
+
+
+
+---
+
+Now let's update the background script to handle the enhanced translation request and add detailed logging:
+
+---
+
+
+
+---
+
+Now let's improve the translation prompt to include context and add logging for the API request:
+
+---
+
+
+
+---
+
+Add logging for the API response:
+
+---
+
+
+
+---
+
+Update the message handler to pass the new parameters:
+
+---
+
+
+
+---
+
+## 4. Improve Batching for Larger Chunks with Context
+
+Now let's improve the batching system to create larger, more contextual chunks:
+
+---
+
+
+
+---
+
+Now let's add the createSmartBatches function:
+
+---
+
+
+
+---
+
+## 5. Add Continuous Translation for New Content
+
+Now let's add options for continuous translation and implement a mutation observer:
+
+---
+
+
+
+---
+
+Let me check the options.html structure:
+
+---
+
+<details>
+            <summary>Grep search for "auto-detect" • **1** files</summary>
+        
+| File | Line | Match |
+|------|------|-------|
+| `file:///home/gwillen/src/ai4e-translate-ext/options.html` | L126 | `<input type="checkbox" id="auto-detect-language">` |
+| `file:///home/gwillen/src/ai4e-translate-ext/options.html` | L128 | `Auto-detect source language` |
+
+</details>
+
+---
+
+Read file: options.html
+
+---
+
+Now I'll add the continuous translation option after the preserve formatting option:
+
+---
+
+
+
+---
+
+Now let's add the continuous translation option to the options JavaScript:
+
+---
+
+
+
+---
+
+
+
+---
+
+Now let's implement the mutation observer for continuous translation in the content script:
+
+---
+
+
+
+---
+
+Now let's add the continuous translation functions:
+
+---
+
+
+
+---
+
+Update the translateTextNodes function to handle continuous translation:
+
+---
+
+
+
+---
+
+Let's commit all these comprehensive improvements:
+
+---
+
+```bash
+git add -A && git commit -m "Implement advanced debugging and continuous translation features: forward logs to page console, add detailed translation logging with unique IDs, improve batching for better context, add mutation observer for continuous translation of new content"
+```
+
+```
+gwillen@quokka:~/src/ai4e-translate-ext$ git add -A && git commit -m "Implement advanced debugg
+ing and continuous translation features: forward logs to page console, add detailed translation
+ logging with unique IDs, improve batching for better context, add mutation observer for contin
+gwillen@quokka:~/src/ai4e-translate-ext$ git add -A && git commit -m "Implement advanced debugg
+ing and continuous translation features: forward logs to page console, add detailed translation
+ logging with unique IDs, improve batching for better context, add mutation observer for contin
+uous translation of new content"
+[master f57b23b] Implement advanced debugging and continuous translation features: forward logs
+ to page console, add detailed translation logging with unique IDs, improve batching for better
+ context, add mutation observer for continuous translation of new content
+ 6 files changed, 607 insertions(+), 35 deletions(-)
+gwillen@quokka:~/src/ai4e-translate-ext$
+```
+
+---
+
+Perfect! Now let's update the test page and README to document these new powerful features:
+
+---
+
+
+
+---
+
+
+
+
+
+---
+

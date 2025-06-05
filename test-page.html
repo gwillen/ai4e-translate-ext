@@ -145,7 +145,40 @@
         <p>Select text that spans multiple elements (like this <strong>bold text across</strong> different tags) and the extension will preserve the HTML structure while translating each text node appropriately.</p>
 
         <h3>Progress Control</h3>
-        <p>Use the stop button in the popup to cancel long-running page translations at any time.</p>
+        <p>Use the stop button in the popup or on-page progress indicator to cancel long-running page translations at any time.</p>
+
+        <h3>Developer Debugging</h3>
+        <p>Open the browser console (F12) to see detailed translation logs including:</p>
+        <ul>
+            <li>Original text being translated</li>
+            <li>Full translation prompts with context</li>
+            <li>Complete API responses</li>
+            <li>Batch numbers and unique request IDs</li>
+            <li>Final text placement on the page</li>
+        </ul>
+
+        <h3>Smart Batching</h3>
+        <p>The extension now groups related text elements together for better translation context. Elements in the same paragraph or section are translated together, providing the AI with more context for accurate translations.</p>
+
+        <h3>Continuous Translation</h3>
+        <p>Enable continuous translation in the options to automatically translate new content that appears on the page (great for chat applications, infinite scroll, or dynamically loaded content).</p>
+
+        <div id="dynamic-content" style="margin-top: 20px; padding: 10px; border: 2px dashed #ccc;">
+            <p>Dynamic content area - enable continuous translation in options and click the button below to test:</p>
+            <button onclick="addDynamicContent()">Add New Content</button>
+            <div id="new-content-container"></div>
+        </div>
+
+        <script>
+            let contentCounter = 1;
+            function addDynamicContent() {
+                const container = document.getElementById('new-content-container');
+                const newContent = document.createElement('p');
+                newContent.textContent = `This is dynamically added content #${contentCounter}. It should be automatically translated if continuous translation is enabled.`;
+                container.appendChild(newContent);
+                contentCounter++;
+            }
+        </script>
     </div>
 </body>
 </html>

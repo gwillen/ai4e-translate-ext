@@ -4,18 +4,30 @@ A Firefox extension that provides intelligent translation of web content using L
 
 ## 🌟 Features
 
-- **Smart Text Selection**: Select any text on a webpage and translate it instantly with in-place replacement
-- **Full Page Translation**: Translate entire web pages with visual progress tracking and batch processing
-- **Real-time Progress Tracking**: See translation progress with element highlighting and batch visualization
-- **Visual Feedback**: Elements being translated show a subtle blue pulse, completed translations are highlighted in green
-- **Batch Processing Visualization**: Color-coded borders show which elements were translated together
-- **OpenAI Integration**: Uses OpenAI's powerful language models for high-quality translations
-- **Context Menu Integration**: Right-click to translate selected text or entire pages
-- **Quick Translation Popup**: Translate text directly from the extension popup with progress updates
-- **Multiple Languages**: Support for dozens of languages including English, Spanish, French, German, Japanese, Chinese, Arabic, and more
-- **Customizable Settings**: Configure API endpoints, default languages, and translation preferences
-- **Privacy-Focused**: Your API keys are stored locally in your browser
-- **Modern UI**: Clean, responsive interface with dark mode support
+- **🌐 Whole Page Translation**: Translate entire web pages while preserving HTML structure and formatting
+- **📝 Selected Text Translation**: Translate specific text selections, even across multiple HTML elements
+- **🎯 Visual Progress Tracking**: Real-time progress indicators with element highlighting and batch visualization
+- **⏹️ Translation Control**: Stop button to cancel long-running translations (both in popup and on-page)
+- **🎨 Interactive Translation Adjustment**: Click translated text to access different translation styles:
+  - Literal Translation (word-for-word accuracy)
+  - Natural Translation (fluent, idiomatic)
+  - Formal Style (professional language)
+  - Casual Style (conversational tone)
+  - Custom Prompt (user-defined instructions)
+  - Restore Original (undo translation)
+- **🧠 Smart Batching**: Groups related text elements for better translation context and accuracy
+- **🔄 Continuous Translation**: Automatically translates new content as it appears (lazy loading, infinite scroll, chat apps)
+- **🐛 Advanced Debugging**: Comprehensive logging system with detailed translation information:
+  - Original text and translation prompts
+  - Complete API requests and responses
+  - Batch numbers and unique request IDs
+  - Final text placement tracking
+- **🔧 Flexible API Support**: Works with OpenAI API and compatible services (Anthropic Claude, local models, etc.)
+- **⚙️ Comprehensive Options**: Extensive customization through the options page
+- **🌙 Dark Mode Support**: Seamless experience in both light and dark themes
+- **💾 Whitespace Preservation**: Maintains proper spacing around links and HTML elements
+- **🎨 Visual Feedback**: Hover effects, tooltips, and batch grouping visualization
+- **🔒 Privacy-Focused**: Your API keys are stored locally in your browser
 
 ## 🚀 Installation
 
@@ -107,6 +119,31 @@ After installation, you need to configure your AI service:
 4. **Click "Translate"**
 5. **Copy the result** to your clipboard
 
+### Interactive Translation Adjustment
+
+1. **After translating text**, hover over translated elements to see tooltips
+2. **Click on any translated text** to open the adjustment menu
+3. **Choose from 6 different translation styles**:
+   - **Literal**: Word-for-word accuracy
+   - **Natural**: Fluent and idiomatic
+   - **Formal**: Professional language
+   - **Casual**: Conversational tone
+   - **Custom**: Enter your own instructions
+   - **Restore**: Return to original text
+4. **The text is re-translated** with your chosen style
+
+### Debugging and Development
+
+1. **Open browser console** (F12) to see detailed logs
+2. **View comprehensive translation information**:
+   - Original text and context
+   - Full translation prompts
+   - Complete API requests and responses
+   - Batch numbers and unique request IDs
+   - Final text placement details
+3. **Monitor continuous translation** activity for dynamic content
+4. **Track smart batching** decisions and groupings
+
 ## 🛠️ Configuration Options
 
 ### API Configuration
@@ -120,6 +157,7 @@ After installation, you need to configure your AI service:
 - **Auto-detect Source Language**: Automatically detect the original language
 - **Show Translation Overlay**: Display results in page overlay
 - **Preserve Formatting**: Maintain original text formatting
+- **Continuous Translation**: Automatically translate new content as it appears on the page
 
 ### Advanced Settings
 - **Max Tokens**: Maximum response length (100-4000)
