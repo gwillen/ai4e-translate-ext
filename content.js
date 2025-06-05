@@ -420,45 +420,108 @@ function stopTranslation() {
   showNotification('Translation stopped by user');
 }
 
+// Skip tags which have text content, but where that text is
+//   normally not shown on the page at all. This is probably
+//   actually covered by other checks now, but check anyway.
+const skipTags = ['script', 'style', 'noscript', 'video'];
+
 /**
- * Get text nodes within a selection range
+ * Extract text chunks from a root element using a tree walker.
+ * @param {Element} rootElement - The root element to extract text chunks from.
+ * @returns {Array} An array of text nodes.
  */
-function getTextNodesInRange(range) {
-  const textNodes = [];
+function extractTextChunksTreeWalker(rootElement) {
   const walker = document.createTreeWalker(
-    range.commonAncestorContainer,
+    rootElement,
     NodeFilter.SHOW_TEXT,
     {
       acceptNode: function(node) {
-        // Skip script, style, and other non-visible elements
+        // Skip if text is effectively invisible
         const parent = node.parentElement;
-        if (!parent) return NodeFilter.FILTER_REJECT;
-
-        const tagName = parent.tagName.toLowerCase();
-        const skipTags = ['script', 'style', 'noscript', 'code', 'pre'];
-
-        if (skipTags.includes(tagName)) {
+        if (!parent ||
+            !parent.checkVisibility() ||
+            skipTags.includes(parent.tagName.toLowerCase())) {
           return NodeFilter.FILTER_REJECT;
         }
 
-        // Check if node intersects with selection range
-        if (range.intersectsNode(node)) {
-          return NodeFilter.FILTER_ACCEPT;
-        }
-
-        return NodeFilter.FILTER_REJECT;
+        // Only accept text nodes with meaningful content
+        return node.textContent.trim().length > 0 ?
+          NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
       }
     }
   );
 
+  const textNodes = [];
   let node;
   while (node = walker.nextNode()) {
-    if (node.textContent.trim()) {
-      textNodes.push(node);
-    }
+    textNodes.push(node);
   }
-
   return textNodes;
+}
+
+/**
+ * Get all text nodes from an element
+ * @param {Element} element - Root element to search
+ * @returns {Array} Array of text nodes
+ */
+function getTextNodes(element) {
+  return extractTextChunksTreeWalker(element);
+}
+
+/**
+ * Get text nodes within a selection range
+ * @param {Range} range - The range to get text nodes from.
+ */
+function getTextNodesInRange(range) {
+  const textNodes = extractTextChunksTreeWalker(range.commonAncestorContainer);
+  return textNodes.filter(node => range.intersectsNode(node));
+}
+
+/**
+ * Merge text nodes into groups of text nodes that are in the same block-level ancestor.
+ * @param {Array} textNodes - Array of text nodes to merge.
+ * @returns {Array} An array of arrays of text nodes.
+ */
+function mergeTextNodes(textNodes) {
+  // Group text nodes by their nearest block ancestor
+  const groups = new Map();
+
+  textNodes.forEach(textNode => {
+    let ancestor = textNode.parentElement;
+
+    // Walk up to find the nearest block-level ancestor
+    while (ancestor && ancestor !== document.body) {
+      const style = window.getComputedStyle(ancestor);
+      const blockLike = ['block', 'flex', 'grid', 'table']; //, 'list-item'];
+      if (blockLike.includes(style.display)) {
+        break;
+      }
+      ancestor = ancestor.parentElement;
+    }
+
+    if (!ancestor) ancestor = document.body;
+
+    if (!groups.has(ancestor)) {
+      groups.set(ancestor, []);
+    }
+    groups.get(ancestor).push(textNode);
+  });
+
+  // Convert groups to chunks
+  const chunks = [];
+  groups.forEach((textNodes, ancestor) => {
+    const text = ancestor.innerText;
+    if (text.trim().length > 0) {
+      chunks.push({
+        element: ancestor,
+        text,
+        length: text.length,
+        textNodes: textNodes
+      });
+    }
+  });
+
+  return chunks;
 }
 
 /**
@@ -469,6 +532,9 @@ function getTextNodesInRange(range) {
  * @param {string} translationMode - Translation mode/style to use
  */
 async function translateTextNodes(textNodes, targetLanguage, context = 'page', translationMode = 'natural') {
+  // Merge text nodes into chunks
+  const chunks = mergeTextNodes(textNodes);
+
   // Reset translation state
   shouldStopTranslation = false;
   isTranslationActive = true;
@@ -479,76 +545,29 @@ async function translateTextNodes(textNodes, targetLanguage, context = 'page', t
     isTranslationPaused = false;
   }
 
-  // Filter translatable nodes
-  const translatableNodes = textNodes.filter(node => {
-    const text = node.textContent.trim();
-
-    // Check text content requirements
-    if (text.length < 3 || /^[\d\s\p{P}]+$/u.test(text)) {
-      return false;
-    }
-
-    // Check if the parent element is visible
-    const element = node.parentElement;
-    if (!element) {
-      return false;
-    }
-
-    // Use modern checkVisibility() API if available, with fallback
-    if (typeof element.checkVisibility === 'function') {
-      try {
-        return element.checkVisibility();
-      } catch (error) {
-        Logger.debug('checkVisibility() failed, using fallback:', error);
-      }
-    }
-
-    // Fallback visibility checks for older browsers
-    const style = window.getComputedStyle(element);
-    if (style.display === 'none' ||
-        style.visibility === 'hidden' ||
-        style.opacity === '0') {
-      return false;
-    }
-
-    // Check if element has zero dimensions
-    const rect = element.getBoundingClientRect();
-    if (rect.width === 0 && rect.height === 0) {
-      return false;
-    }
-
-    return true;
-  });
-
-  // Log the list of nodes to be translated with actual node objects for dev tools inspection
-  const filteredCount = textNodes.length - translatableNodes.length;
-  Logger.info(`Starting ${context} translation - ${translatableNodes.length} nodes to translate (${filteredCount} filtered out):`, translatableNodes);
-  console.log(`${translatableNodes.length} nodes are translatable in ${context} (${filteredCount} filtered out for content or visibility)`);
+  // Log the list of chunks to be translated with actual node objects for dev tools inspection
+  Logger.info(`Starting ${context} translation - ${chunks.length} chunks to translate`);
+  console.log(`${chunks.length} chunks are translatable in ${context}`);
 
   // Show pause/resume button for page and selection translations
   if (context === 'page' || context === 'selection') {
     createPauseResumeButton();
   }
 
-  if (translatableNodes.length === 0) {
+  if (chunks.length === 0) {
     showNotification('No translatable text found');
     return;
   }
 
   // Show appropriate progress indicator
   if (context === 'page') {
-    // Create smarter batches grouped by proximity and context
-    const batches = createSmartBatches(translatableNodes);
-    const totalBatches = batches.length;
-    showProgressIndicator(translatableNodes.length, targetLanguage);
-
-    Logger.info(`Created ${totalBatches} smart batches for ${translatableNodes.length} elements`);
+    showProgressIndicator(chunks.length, targetLanguage);
 
     let translatedCount = 0;
-    let batchIndex = 0;
+    let chunkIndex = 0;
 
     // Translate in contextual batches for page translation
-    for (const batch of batches) {
+    for (const chunk of chunks) {
       if (shouldStopTranslation) {
         Logger.info('Translation cancelled by user');
         hidePauseResumeButton();
@@ -566,14 +585,14 @@ async function translateTextNodes(textNodes, targetLanguage, context = 'page', t
         return;
       }
 
-      updateProgress(translatedCount, translatableNodes.length, batchIndex + 1, totalBatches, batch);
+      updateProgress(translatedCount, chunks.length, chunkIndex + 1, chunks.length, chunk);
 
-      await translateBatch(batch, targetLanguage, batchIndex, translationMode);
-      translatedCount += batch.length;
-      batchIndex++;
+      await translateBatch(chunk, targetLanguage, chunkIndex, translationMode);
+      translatedCount += chunk.length;
+      chunkIndex++;
 
-      if (batchIndex < totalBatches) {
-        await new Promise(resolve => setTimeout(resolve, 800));
+      if (chunkIndex < chunks.length) {
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
     }
 
@@ -581,35 +600,35 @@ async function translateTextNodes(textNodes, targetLanguage, context = 'page', t
     hidePauseResumeButton();
     setTimeout(() => hideProgressIndicator(), 3000);
 
-        if (!shouldStopTranslation) {
-      showNotification(`Page translation complete! ${translatedCount} elements translated to ${targetLanguage}`);
+    if (!shouldStopTranslation) {
+      showNotification(`Page translation complete! ${translatedCount} chunks translated to ${targetLanguage}`);
     }
   } else if (context === 'continuous') {
     // For continuous translation, translate silently in background
-    Logger.info(`Starting continuous translation of ${translatableNodes.length} new elements`);
+    Logger.info(`Starting continuous translation of ${chunks.length} new chunks`);
 
-    const batches = createSmartBatches(translatableNodes);
-    let batchIndex = 0;
-
-    for (const batch of batches) {
+    for (const chunk of chunks) {
       if (shouldStopTranslation) break;
 
-      await translateBatch(batch, targetLanguage, batchIndex, translationMode);
-      batchIndex++;
+      await translateBatch(chunk, targetLanguage, chunkIndex, translationMode);
+      chunkIndex++;
 
       // Shorter delay for continuous translation
-      if (batchIndex < batches.length) {
-        await new Promise(resolve => setTimeout(resolve, 300));
+      if (chunkIndex < chunks.length) {
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
     }
 
-    if (!shouldStopTranslation && translatableNodes.length > 0) {
-      Logger.info(`Continuous translation complete: ${translatableNodes.length} elements translated`);
+    if (!shouldStopTranslation && chunks.length > 0) {
+      Logger.info(`Continuous translation complete: ${chunks.length} chunks translated`);
     }
   } else {
-    // For selection, translate immediately without progress UI
     showLoadingIndicator();
-    await translateBatch(translatableNodes, targetLanguage, 0, translationMode);
+    // For selection, translate immediately without progress UI
+    for (const chunk of chunks) {
+      await translateBatch(chunk, targetLanguage, 0, translationMode);
+    }
+
     hideLoadingIndicator();
     hidePauseResumeButton();
 
@@ -623,19 +642,16 @@ async function translateTextNodes(textNodes, targetLanguage, context = 'page', t
  * Translate a batch of text nodes
  * @param {Array} batch - Array of text nodes to translate
  * @param {string} targetLanguage - Target language code
- * @param {number} batchIndex - Index of the current batch
+ * @param {number} chunkIndex - Index of the current chunk
  * @param {string} translationMode - Translation mode/style to use
  */
-async function translateBatch(batch, targetLanguage, batchIndex, translationMode = 'natural') {
-  // Highlight current batch being translated (for page translation)
-  batch.forEach(node => {
-    const element = node.parentElement;
-    if (element) {
-      element.classList.add('ai-translating');
-    }
-  });
+async function translateBatch(chunk, targetLanguage, chunkIndex, translationMode = 'natural') {
+  // Highlight current chunk being translated (for page translation)
+  const element = chunk.element;
+  console.log("Translating chunk", chunk);
+  element.classList.add('ai-translating');
 
-  // Check for pause state before starting batch
+  // Check for pause state before starting chunk
   while (isTranslationPaused && !shouldStopTranslation) {
     await new Promise(resolve => setTimeout(resolve, 500));
   }
@@ -644,38 +660,38 @@ async function translateBatch(batch, targetLanguage, batchIndex, translationMode
     return;
   }
 
-  // Translate the batch
-  const promises = batch.map(async (node, nodeIndex) => {
+  // Translate the chunk
+  const promises = chunk.textNodes.map(async (node, nodeIndex) => {
     const text = node.textContent.trim();
-    const requestId = `batch-${batchIndex}-node-${nodeIndex}-${Date.now()}`;
+    const requestId = `chunk-${chunkIndex}-node-${nodeIndex}-${Date.now()}`;
 
     try {
       Logger.debug(`Translation Request [${requestId}]`, {
-        batchIndex: batchIndex,
+        chunkIndex: chunkIndex,
         nodeIndex: nodeIndex,
         originalText: text,
         targetLanguage: targetLanguage,
-        context: getSurroundingContext(node)
+        context: chunk.text
       });
 
       // Increment request count and check auto-pause
       translationRequestCount++;
-      Logger.debug(`Translation request #${translationRequestCount} for batch ${batchIndex}, node ${nodeIndex}`);
+      Logger.debug(`Translation request #${translationRequestCount} for chunk ${chunkIndex}, node ${nodeIndex}`);
 
       const response = await browser.runtime.sendMessage({
         action: 'translateText',
         text: text,
         targetLanguage: targetLanguage,
         requestId: requestId,
-        batchIndex: batchIndex,
-        context: getSurroundingContext(node),
+        chunkIndex: chunkIndex,
+        context: chunk.text,
         translationMode: translationMode
       });
 
       // Check auto-pause after each request
       checkAutoPause();
 
-            if (!response.error && response.translatedText) {
+      if (!response.error && response.translatedText) {
         Logger.debug(`Translation Success [${requestId}]`, {
           translatedText: response.translatedText,
           fullResponse: response
@@ -698,13 +714,12 @@ async function translateBatch(batch, targetLanguage, batchIndex, translationMode
         });
 
         // Update element styling
-        const element = node.parentElement;
         if (element) {
           element.classList.remove('ai-translating');
-          element.classList.add('ai-translated', `batch-${batchIndex % 5}`, 'ai-hover-enabled');
+          element.classList.add('ai-translated', `chunk-${chunkIndex % 5}`, 'ai-hover-enabled');
 
           // Store translation data for re-translation features
-          element.setAttribute('data-translation-batch', batchIndex.toString());
+          element.setAttribute('data-translation-chunk', chunkIndex.toString());
           element.setAttribute('data-original-text', originalText.trim());
           element.setAttribute('data-translated-text', trimmedTranslation);
           element.setAttribute('data-target-language', targetLanguage);
@@ -712,7 +727,6 @@ async function translateBatch(batch, targetLanguage, batchIndex, translationMode
         }
       } else {
         // Remove translating class if translation failed
-        const element = node.parentElement;
         if (element) {
           element.classList.remove('ai-translating');
         }
@@ -721,7 +735,6 @@ async function translateBatch(batch, targetLanguage, batchIndex, translationMode
       console.error('Failed to translate text node:', error);
 
       // Remove translating class if translation failed
-      const element = node.parentElement;
       if (element) {
         element.classList.remove('ai-translating');
       }
@@ -937,70 +950,6 @@ async function translateEntirePage(translationMode = 'natural') {
     hideProgressIndicator();
     showError('Page translation failed. Please check your API configuration.');
   }
-}
-
-/**
- * Get all text nodes from an element
- * @param {Element} element - Root element to search
- * @returns {Array} Array of text nodes
- */
-function getTextNodes(element) {
-  const textNodes = [];
-  const walker = document.createTreeWalker(
-    element,
-    NodeFilter.SHOW_TEXT,
-    {
-      acceptNode: function(node) {
-        // Skip script, style, and other non-visible elements
-        const parent = node.parentElement;
-        if (!parent) return NodeFilter.FILTER_REJECT;
-
-        const tagName = parent.tagName.toLowerCase();
-        const skipTags = ['script', 'style', 'noscript', 'code', 'pre'];
-
-        if (skipTags.includes(tagName)) {
-          return NodeFilter.FILTER_REJECT;
-        }
-
-        // Skip if parent is not visible
-        // Use modern checkVisibility() API if available, with fallback
-        if (typeof parent.checkVisibility === 'function') {
-          try {
-            if (!parent.checkVisibility()) {
-              return NodeFilter.FILTER_REJECT;
-            }
-          } catch (error) {
-            // Fall through to manual checks
-          }
-        } else {
-          // Fallback visibility checks for older browsers
-          const style = window.getComputedStyle(parent);
-          if (style.display === 'none' ||
-              style.visibility === 'hidden' ||
-              style.opacity === '0') {
-            return NodeFilter.FILTER_REJECT;
-          }
-
-          // Check if element has zero dimensions
-          const rect = parent.getBoundingClientRect();
-          if (rect.width === 0 && rect.height === 0) {
-            return NodeFilter.FILTER_REJECT;
-          }
-        }
-
-        return NodeFilter.FILTER_ACCEPT;
-      }
-    }
-  );
-
-  let node;
-  while (node = walker.nextNode()) {
-    if (node.textContent.trim()) {
-      textNodes.push(node);
-    }
-  }
-
-  return textNodes;
 }
 
 /**

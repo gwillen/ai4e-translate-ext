@@ -512,3 +512,394 @@ _**Assistant**_
 
 ---
 
+You're absolutely right! Translating invisible nodes is wasteful and can lead to unnecessary API calls. The `checkVisibility()` method is indeed a good modern approach for this. Let me add this visibility check to the node filtering logic.
+
+---
+
+Read file: content.js
+
+---
+
+Now I'll update the filter to include visibility checking. I'll also add some fallback logic since `checkVisibility()` is a relatively new API:
+
+---
+
+
+
+---
+
+Now let me also update the logging to show how many nodes were filtered out due to visibility:
+
+---
+
+
+
+---
+
+Let me also update the test page to include some hidden elements so we can verify the visibility filtering works:
+
+---
+
+
+
+---
+
+Let me also update the instructions in the test page to mention the visibility testing:
+
+---
+
+
+
+---
+
+Let me also check if there are other places in the code where we should apply visibility filtering, like in the `getTextNodes` function:
+
+---
+
+Read file: content.js
+
+---
+
+I can see that the `getTextNodes` function already has some basic visibility filtering, but it's using older methods and doesn't include all the checks. Let me update it to use the same comprehensive visibility checking:
+
+---
+
+
+
+---
+
+Now let me commit these visibility filtering improvements:
+
+---
+
+```bash
+git add -A && git commit -m "Add comprehensive visibility filtering to exclude hidden nodes from translation"
+```
+
+```
+gwillen@quokka:~/src/ai4e-translate-ext$ git add -A && git commit -m "Add comprehensive visibil
+ity filtering to exclude hidden nodes frogit add -A && git commit -m "Add comprehensive visibil
+ity filtering to exclude hidden nodes from translation"
+[master 99f0069] Add comprehensive visibility filtering to exclude hidden nodes from translatio
+n
+ 3 files changed, 348 insertions(+), 7 deletions(-)
+gwillen@quokka:~/src/ai4e-translate-ext$
+```
+
+---
+
+Perfect! I've successfully implemented comprehensive visibility filtering to exclude hidden nodes from translation. Here's what I've added:
+
+## ✅ Visibility Filtering Features
+
+### 1. **Modern checkVisibility() API Support**
+- Uses the native `Element.checkVisibility()` method when available
+- This API comprehensively checks for visibility including:
+  - CSS `display: none`
+  - CSS `visibility: hidden` 
+  - CSS `opacity: 0`
+  - Elements outside viewport
+  - Elements with zero dimensions
+  - Elements inside closed `<details>` elements
+
+### 2. **Robust Fallback for Older Browsers**
+- Manual checks for `display: none`, `visibility: hidden`, `opacity: 0`
+- Checks for zero-dimension elements using `getBoundingClientRect()`
+- Ensures compatibility across different browser versions
+
+### 3. **Applied in Two Key Places**
+
+#### `translateTextNodes()` function:
+- Filters out invisible nodes during the main translation filtering process
+- Shows count of filtered nodes in console logs for debugging
+
+#### `getTextNodes()` function:
+- Prevents invisible nodes from being collected in the first place
+- More efficient as it avoids processing hidden content entirely
+
+### 4. **Enhanced Test Page**
+- Added hidden test sections with different visibility states:
+  - `display: none`
+  - `visibility: hidden`
+  - `opacity: 0`
+  - Zero dimensions
+- Updated instructions to verify filtering works correctly
+
+### 5. **Improved Logging**
+- Shows total count of nodes filtered out
+- Helps with debugging to see how many invisible elements were excluded
+
+## 🧪 Testing
+
+Use the updated `test-debug.html` file to verify:
+
+1. **Open developer console** and check the logs
+2. **Translate the page** and notice the "filtered out" count
+3. **Verify hidden sections aren't translated** (they shouldn't appear in translation batches)
+4. **Check that visible text is still translated normally**
+
+The implementation ensures that:
+- ⚡ **Better Performance**: No wasted API calls on invisible content
+- 🎯 **Accurate Targeting**: Only translates what users can actually see
+- 🔧 **Cross-browser Compatibility**: Works with both modern and older browsers
+- 🐛 **Better Debugging**: Clear logging of what gets filtered and why
+
+This should significantly reduce unnecessary translation requests and improve the overall efficiency of your extension!
+
+---
+
+_**User**_
+
+Thanks! Now, another thing I've noticed: we're trying to store some metadata (particularly data-original-text and data-translated-text) on what seems to be the text node's parent node. However, it appears to me that this approach is unsound, because a given element can have multiple children that are text nodes. I am also concerned more generally about our appproach of translating individual text nodes at a time, which are e.g. broken up by links and formatting tags and the like, which can produce unnatural small fragements of text which don't translate well. Can we think more about our approach here, and how we could structure our translation task, with respect to the text and the elements/nodes on the page?
+
+(Let's just talk about the approach for now -- no coding yet!)
+
+---
+
+_**Assistant**_
+
+
+
+---
+
+Excellent observation! You've identified two fundamental architectural issues with our current approach. Let me break down the problems and explore better solutions:
+
+## 🚨 Current Problems
+
+### 1. **Metadata Storage Collision**
+```html
+<p>Hello <strong>world</strong> and <em>everyone</em>!</p>
+```
+This creates 3 text nodes: "Hello ", "world", " and ", "everyone", "!"
+
+Our current approach stores `data-original-text` and `data-translated-text` on the `<p>` element, but which text node do they refer to? We'll overwrite metadata with each text node, losing track of the others.
+
+### 2. **Translation Fragmentation** 
+Text like "This is **very important** information" becomes separate translation units:
+- "This is " 
+- "very important"
+- " information"
+
+The AI loses context and produces poor translations because it can't see the complete semantic unit.
+
+## 🎯 Better Approaches to Consider
+
+### **Approach 1: Block-Level Translation**
+Translate at the semantic block level (paragraphs, headings, list items):
+
+```javascript
+// Instead of individual text nodes, translate entire blocks
+const blocks = document.querySelectorAll('p, h1, h2, h3, li, td, etc.');
+```
+
+**Pros:** Natural semantic boundaries, better context, cleaner metadata storage
+**Cons:** Need to handle text distribution back to original structure
+
+### **Approach 2: HTML-Aware Translation**
+Send structured text to the API with placeholders for formatting:
+
+```
+Original: "This is <strong>bold</strong> and <a href="#">linked</a> text."
+Send to API: "This is [BOLD]bold[/BOLD] and [LINK]linked[/LINK] text."
+Parse response and reconstruct HTML
+```
+
+**Pros:** Preserves context while maintaining formatting info
+**Cons:** Requires API to understand/preserve placeholder format
+
+### **Approach 3: Content-Aware Chunking**
+Group related text nodes that form semantic units:
+
+```javascript
+// Identify logical groupings like sentences or clauses
+// that span multiple text nodes due to inline formatting
+```
+
+**Pros:** Balances context with granular control
+**Cons:** Complex boundary detection logic
+
+### **Approach 4: Element Tree Translation**
+Translate entire element subtrees, handling nested structure:
+
+```html
+<div class="translate-unit">
+  <p>First paragraph with <em>formatting</em>.</p>
+  <p>Second paragraph with <a href="#">links</a>.</p>
+</div>
+```
+
+**Pros:** Maximum context preservation
+**Cons:** Most complex reconstruction
+
+## 🗃️ Metadata Storage Solutions
+
+### **Option 1: WeakMap Storage**
+```javascript
+const originalTextMap = new WeakMap();
+const translatedTextMap = new WeakMap();
+// Store metadata keyed by actual DOM nodes
+```
+
+### **Option 2: Unique ID System**
+```javascript
+// Generate unique IDs for translation units
+// Store metadata in a separate object/Map
+```
+
+### **Option 3: Structured Metadata**
+```javascript
+// Store arrays/objects of metadata on container elements
+element.setAttribute('data-translation-metadata', JSON.stringify({
+  textNodes: [...],
+  originalTexts: [...],
+  translatedTexts: [...]
+}));
+```
+
+## 🎯 My Recommendation
+
+I think the **Block-Level + HTML-Aware** hybrid approach would work best:
+
+1. **Identify semantic blocks** (paragraphs, headings, list items)
+2. **Extract block content** with inline formatting preserved via placeholders
+3. **Translate complete blocks** for better context
+4. **Reconstruct HTML** by parsing translated text and restoring formatting
+5. **Use WeakMap storage** for clean metadata management
+
+This would solve both problems:
+- ✅ Better translation quality (full context)
+- ✅ Clean metadata storage (no conflicts)
+- ✅ Semantic translation boundaries
+- ✅ Preserved formatting
+
+What's your take on this approach? Should we focus on block-level translation, or do you see other aspects we should consider first?
+
+---
+
+_**User**_
+
+I like the idea of starting by identifying semantic blocks. What's our strategy for making sure that, in the process, we end up covering each piece of visible text excatly once?
+
+---
+
+_**Assistant**_
+
+
+
+---
+
+Excellent question! This is the core challenge of moving to block-level translation. We need a strategy that ensures **complete coverage with no gaps or overlaps**. Here are the main approaches:
+
+## 🎯 Strategy Options
+
+### **Strategy 1: Hierarchical Selection with Exclusion**
+```javascript
+1. Select all potential semantic blocks: p, h1-h6, li, td, div.content, etc.
+2. For each selected element:
+   - Check if any ancestor is already in our translation set
+   - If yes, skip it (ancestor will handle this text)
+   - If no, add it to translation set and mark all descendants as "covered"
+```
+
+**Example:**
+```html
+<div class="article">
+  <h1>Title</h1>           <!-- ✅ Selected -->
+  <p>First <em>para</em></p> <!-- ✅ Selected -->
+  <div class="content">
+    <p>Nested para</p>     <!-- ❌ Skip: parent div selected -->
+  </div>                   <!-- ✅ Selected instead -->
+</div>
+```
+
+### **Strategy 2: Leaf Container Detection**
+```javascript
+1. Find all semantic containers
+2. Filter to only "leaf" containers (no semantic children)
+3. Handle remaining orphaned text nodes
+```
+
+**Example:**
+```html
+<article>
+  <p>Leaf paragraph</p>     <!-- ✅ Leaf container -->
+  <div>
+    <p>Nested para 1</p>    <!-- ✅ Leaf container -->
+    <p>Nested para 2</p>    <!-- ✅ Leaf container -->
+  </div>                    <!-- ❌ Not leaf: contains <p> children -->
+</article>
+```
+
+### **Strategy 3: Text Node Attribution**
+```javascript
+1. Get all visible text nodes (our current approach)
+2. For each text node, find its "semantic parent" 
+3. Group text nodes by semantic parent
+4. Translate each group as a unit
+```
+
+This ensures every text node is accounted for exactly once.
+
+## 🏆 Recommended Approach: "Semantic Parent Attribution"
+
+I think **Strategy 3** is most robust because it's **text-node-driven** (guarantees coverage) but **semantically-grouped** (better translation):
+
+```javascript
+function findSemanticParent(textNode) {
+  let current = textNode.parentElement;
+  
+  while (current && current !== document.body) {
+    // Is this a semantic block?
+    if (isSemanticBlock(current)) {
+      return current;
+    }
+    current = current.parentElement;
+  }
+  
+  // Fallback: return immediate parent
+  return textNode.parentElement;
+}
+
+function isSemanticBlock(element) {
+  const semanticTags = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'td', 'th', 'blockquote', 'figcaption'];
+  const semanticClasses = ['content', 'text', 'description']; // customizable
+  
+  return semanticTags.includes(element.tagName.toLowerCase()) ||
+         semanticClasses.some(cls => element.classList.contains(cls));
+}
+```
+
+## 🔍 Coverage Validation Algorithm
+
+To ensure complete coverage:
+
+```javascript
+function validateCoverage(originalTextNodes, semanticGroups) {
+  const coveredNodes = new Set();
+  
+  // Collect all text nodes from semantic groups
+  for (const group of semanticGroups) {
+    for (const node of group.textNodes) {
+      coveredNodes.add(node);
+    }
+  }
+  
+  // Check for gaps
+  const uncoveredNodes = originalTextNodes.filter(node => !coveredNodes.has(node));
+  
+  if (uncoveredNodes.length > 0) {
+    Logger.warn('Uncovered text nodes found:', uncoveredNodes);
+    // Handle stragglers...
+  }
+  
+  // Check for overlaps
+  if (coveredNodes.size !== originalTextNodes.length) {
+    Logger.error('Text node coverage mismatch!');
+  }
+}
+```
+
+## 🛡️ Edge
+
+---
+
