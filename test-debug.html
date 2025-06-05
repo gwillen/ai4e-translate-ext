@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Translation Debug Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .highlight {
+            background-color: #ffeb3b;
+            padding: 2px 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Translation Extension Debug Test</h1>
+
+    <div class="section">
+        <h2>Test Section 1</h2>
+        <p>This is a simple paragraph that should be translated. It contains enough text to be considered translatable.</p>
+        <p>Here is another paragraph with different content to test batch processing.</p>
+    </div>
+
+    <div class="section">
+        <h2>Test Section 2</h2>
+        <p>The quick brown fox jumps over the lazy dog. This is a classic pangram used for testing.</p>
+        <ul>
+            <li>First list item with translatable content</li>
+            <li>Second list item for testing</li>
+            <li>Third item to create multiple nodes</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Test Section 3</h2>
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+        <p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+        <p class="highlight">This paragraph has a highlight class to test CSS preservation.</p>
+    </div>
+
+    <div class="section">
+        <h2>Instructions for Testing</h2>
+        <ol>
+            <li>Open the browser developer tools (F12)</li>
+            <li>Go to the Console tab</li>
+            <li>Right-click on this page and select "Translate Entire Page"</li>
+            <li>Watch for the pause/resume button to appear</li>
+            <li>Check the console for the logged list of nodes to be translated</li>
+            <li>Test the pause/resume functionality</li>
+            <li>Configure auto-pause in the extension options to test that feature</li>
+        </ol>
+    </div>
+
+    <div class="section">
+        <h2>Selection Test</h2>
+        <p>Select this text and translate it to test the selection translation feature with pause controls.</p>
+    </div>
+</body>
+</html>

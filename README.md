@@ -22,6 +22,11 @@ A Firefox extension that provides intelligent translation of web content using L
   - Complete API requests and responses
   - Batch numbers and unique request IDs
   - Final text placement tracking
+  - Console logging of translation nodes for dev tools inspection
+- **⏸️ Pause/Resume Control**: Pause and resume translations for debugging:
+  - Manual pause/resume button during translation
+  - Auto-pause after N requests (configurable)
+  - Request counter tracking
 - **🔧 Flexible API Support**: Works with OpenAI API and compatible services (Anthropic Claude, local models, etc.)
 - **⚙️ Comprehensive Options**: Extensive customization through the options page
 - **🌙 Dark Mode Support**: Seamless experience in both light and dark themes
@@ -141,8 +146,13 @@ After installation, you need to configure your AI service:
    - Complete API requests and responses
    - Batch numbers and unique request IDs
    - Final text placement details
-3. **Monitor continuous translation** activity for dynamic content
-4. **Track smart batching** decisions and groupings
+   - **List of nodes to be translated** (actual DOM objects for inspection)
+3. **Use pause/resume controls** for debugging:
+   - **Pause/Resume button** appears during page and selection translations
+   - **Configure auto-pause** in options to pause after N requests (0 = never)
+   - **Request counter** tracks API calls for debugging
+4. **Monitor continuous translation** activity for dynamic content
+5. **Track smart batching** decisions and groupings
 
 ## 🛠️ Configuration Options
 
@@ -158,6 +168,7 @@ After installation, you need to configure your AI service:
 - **Show Translation Overlay**: Display results in page overlay
 - **Preserve Formatting**: Maintain original text formatting
 - **Continuous Translation**: Automatically translate new content as it appears on the page
+- **Auto-pause After N Requests**: Automatically pause translation after specified number of API requests (0 = never, useful for debugging)
 
 ### Advanced Settings
 - **Max Tokens**: Maximum response length (100-4000)
