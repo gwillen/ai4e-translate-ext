@@ -200,7 +200,214 @@ Now I need to update the options.js script to handle this new setting:
 
 ---
 
+I also need to make sure the `continuousTranslation` event listener is properly set up. Let me check where that is:
 
+---
+
+<details>
+            <summary>Grep search for "continuousTranslation.*addEventListener" • **0** files</summary>
+        
+No results found
+</details>
+
+---
+
+
+
+Let me check the current event listeners in options.js:
+
+---
+
+Read file: options.js
+
+---
+
+I notice that the `continuousTranslation` setting is missing from the event listeners. Let me add it:
+
+---
+
+
+
+---
+
+I also need to add the `continuousTranslation` setting to the load and save functions. Let me check if it's missing from the load function:
+
+---
+
+<details>
+            <summary>Grep search for "continuousTranslation.*checked" • **0** files</summary>
+        
+No results found
+</details>
+
+---
+
+I need to add the `continuousTranslation` setting to the load function:
+
+---
+
+
+
+---
+
+Now I need to add it to the save function. Let me find the save function:
+
+---
+
+Read file: options.js
+
+---
+
+I need to add the missing settings to the save function:
+
+---
+
+
+
+---
+
+Now I need to update the `stopTranslation` function to also hide the pause/resume button:
+
+---
+
+
+
+---
+
+Let me find the stopTranslation function:
+
+---
+
+<details>
+            <summary>Grep search for "function stopTranslation" • **2** files</summary>
+        
+| File | Line | Match |
+|------|------|-------|
+| `file:///home/gwillen/src/ai4e-translate-ext/content.js` | L404 | `function stopTranslation() {` |
+| `file:///home/gwillen/src/ai4e-translate-ext/content.js` | L404 | `function stopTranslation() {` |
+
+</details>
+
+---
+
+Read file: content.js
+
+---
+
+
+
+---
+
+Now let me test the implementation by running the extension. First, let me commit the changes:
+
+---
+
+Model provided invalid arguments to terminal tool.
+
+---
+
+```bash
+cd /home/gwillen/src/ai4e-translate-ext && git add -A && git commit -m "Add pause/resume functionality and debugging features"
+```
+
+```
+[master d024368] Add pause/resume functionality and debugging features
+ 4 files changed, 441 insertions(+), 1 deletion(-)
+ create mode 100644 .specstory/history/2025-06-05_17-15-request-for-translation-
+tool-features.m
+d
+               
+```
+
+---
+
+Now let me create a simple test page to verify the functionality:
+
+---
+
+```diff
+- 
++ <!DOCTYPE html>
++ <html lang="en">
++ <head>
++     <meta charset="UTF-8">
++     <meta name="viewport" content="width=device-width, initial-scale=1.0">
++     <title>Translation Debug Test Page</title>
++     <style>
++         body {
++             font-family: Arial, sans-serif;
++             max-width: 800px;
++             margin: 0 auto;
++             padding: 20px;
++             line-height: 1.6;
++         }
++         .section {
++             margin: 20px 0;
++             padding: 15px;
++             border: 1px solid #ddd;
++             border-radius: 5px;
++         }
++         .highlight {
++             background-color: #ffeb3b;
++             padding: 2px 4px;
++         }
++     </style>
++ </head>
++ <body>
++     <h1>Translation Extension Debug Test</h1>
++ 
++     <div class="section">
++         <h2>Test Section 1</h2>
++         <p>This is a simple paragraph that should be translated. It contains enough text to be considered translatable.</p>
++         <p>Here is another paragraph with different content to test batch processing.</p>
++     </div>
++ 
++     <div class="section">
++         <h2>Test Section 2</h2>
++         <p>The quick brown fox jumps over the lazy dog. This is a classic pangram used for testing.</p>
++         <ul>
++             <li>First list item with translatable content</li>
++             <li>Second list item for testing</li>
++             <li>Third item to create multiple nodes</li>
++         </ul>
++     </div>
++ 
++     <div class="section">
++         <h2>Test Section 3</h2>
++         <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
++         <p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
++         <p class="highlight">This paragraph has a highlight class to test CSS preservation.</p>
++     </div>
++ 
++     <div class="section">
++         <h2>Instructions for Testing</h2>
++         <ol>
++             <li>Open the browser developer tools (F12)</li>
++             <li>Go to the Console tab</li>
++             <li>Right-click on this page and select "Translate Entire Page"</li>
++             <li>Watch for the pause/resume button to appear</li>
++             <li>Check the console for the logged list of nodes to be translated</li>
++             <li>Test the pause/resume functionality</li>
++             <li>Configure auto-pause in the extension options to test that feature</li>
++         </ol>
++     </div>
++ 
++     <div class="section">
++         <h2>Selection Test</h2>
++         <p>Select this text and translate it to test the selection translation feature with pause controls.</p>
++     </div>
++ </body>
++ </html>
++ 
+```
+
+---
+
+Let me also update the README to document the new features:
+
+---
+
+Read file: README.md
 
 ---
 
@@ -216,37 +423,90 @@ Now I need to update the options.js script to handle this new setting:
 
 ---
 
-
-
----
-
-
+Now let me commit these documentation updates:
 
 ---
 
+```bash
+git add -A && git commit -m "Add documentation for new debugging features and create test page"
+```
 
-
----
-
-
-
----
-
-
-
----
-
-
-
----
-
-
+```
+gwillen@quokka:~/src/ai4e-translate-ext$ git add -A && git commit -m "Add documentation for new
+ debugging features and create test page"git add -A && git commit -m "Add documentation for new
+ debugging features and create test page"
+[master 2a7fdaa] Add documentation for new debugging features and create test page
+ 2 files changed, 84 insertions(+), 2 deletions(-)
+ create mode 100644 test-debug.html
+gwillen@quokka:~/src/ai4e-translate-ext$
+```
 
 ---
 
+Perfect! I have successfully implemented all the requested debugging features for your translation extension:
 
+## ✅ Features Implemented
+
+### 1. **Pause/Resume Button**
+- A pause/resume button appears during page and selection translations
+- Located in the top-right corner (below the progress indicator)
+- Visual feedback with different colors (blue for pause, red for resume)
+- Automatically hidden when translation completes or is stopped
+
+### 2. **Auto-Pause Configuration**
+- New setting in the options page: "Auto-pause after N requests"
+- Default value is 0 (never pause)
+- Range: 0-100 requests
+- When reached, automatically pauses translation and shows notification
+- Useful for debugging API usage and translation flow
+
+### 3. **Console Logging of Translation Nodes**
+- Logs the actual list of DOM nodes to be translated using `Logger.info()`
+- Passes the actual node objects (not stringified) so dev tools inspection features work
+- Includes context about translation type (page/selection/continuous)
+- Shows count of translatable nodes
+
+### 4. **Additional Debugging Enhancements**
+- Request counter tracking with detailed logging
+- Pause state checking in translation loops
+- Proper cleanup of UI elements when translation stops
+- Integration with existing logging system
+
+## 🔧 How to Use
+
+1. **Configure Auto-Pause**: Go to extension options → Translation Settings → set "Auto-pause after N requests"
+
+2. **Test Pause/Resume**: 
+   - Open `test-debug.html` in Firefox
+   - Open developer console (F12)
+   - Right-click and select "Translate Entire Page"
+   - Watch for the pause button and console logs
+
+3. **Debug Translation Flow**:
+   - Console shows the list of nodes to be translated
+   - Request counter tracks API calls
+   - Pause at any time to inspect state
+   - Auto-pause triggers after configured request count
+
+## 📁 Files Modified
+
+- `content.js`: Added pause/resume functionality, request tracking, and node logging
+- `options.html`: Added auto-pause configuration field
+- `options.js`: Added handling for the new setting
+- `README.md`: Updated documentation
+- `test-debug.html`: Created test page for debugging
+
+The implementation follows your coding guidelines with proper error handling, logging, and functional programming style. All features are now ready for testing and debugging your translation process!
 
 ---
+
+_**User**_
+
+I notice that sometimes we are translating nodes which are not actually visible on the page. Let's exclude those nodes using `parentElement.checkVisibility()`, unless there's some better way to do that.
+
+---
+
+_**Assistant**_
 
 
 

@@ -482,12 +482,48 @@ async function translateTextNodes(textNodes, targetLanguage, context = 'page', t
   // Filter translatable nodes
   const translatableNodes = textNodes.filter(node => {
     const text = node.textContent.trim();
-    return text.length >= 3 && !/^[\d\s\p{P}]+$/u.test(text);
+
+    // Check text content requirements
+    if (text.length < 3 || /^[\d\s\p{P}]+$/u.test(text)) {
+      return false;
+    }
+
+    // Check if the parent element is visible
+    const element = node.parentElement;
+    if (!element) {
+      return false;
+    }
+
+    // Use modern checkVisibility() API if available, with fallback
+    if (typeof element.checkVisibility === 'function') {
+      try {
+        return element.checkVisibility();
+      } catch (error) {
+        Logger.debug('checkVisibility() failed, using fallback:', error);
+      }
+    }
+
+    // Fallback visibility checks for older browsers
+    const style = window.getComputedStyle(element);
+    if (style.display === 'none' ||
+        style.visibility === 'hidden' ||
+        style.opacity === '0') {
+      return false;
+    }
+
+    // Check if element has zero dimensions
+    const rect = element.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) {
+      return false;
+    }
+
+    return true;
   });
 
   // Log the list of nodes to be translated with actual node objects for dev tools inspection
-  Logger.info(`Starting ${context} translation - ${translatableNodes.length} nodes to translate:`, translatableNodes);
-  console.log(`${translatableNodes.length} nodes are translatable in ${context}`);
+  const filteredCount = textNodes.length - translatableNodes.length;
+  Logger.info(`Starting ${context} translation - ${translatableNodes.length} nodes to translate (${filteredCount} filtered out):`, translatableNodes);
+  console.log(`${translatableNodes.length} nodes are translatable in ${context} (${filteredCount} filtered out for content or visibility)`);
 
   // Show pause/resume button for page and selection translations
   if (context === 'page' || context === 'selection') {
@@ -926,10 +962,30 @@ function getTextNodes(element) {
           return NodeFilter.FILTER_REJECT;
         }
 
-        // Skip if parent is hidden
-        const style = window.getComputedStyle(parent);
-        if (style.display === 'none' || style.visibility === 'hidden') {
-          return NodeFilter.FILTER_REJECT;
+        // Skip if parent is not visible
+        // Use modern checkVisibility() API if available, with fallback
+        if (typeof parent.checkVisibility === 'function') {
+          try {
+            if (!parent.checkVisibility()) {
+              return NodeFilter.FILTER_REJECT;
+            }
+          } catch (error) {
+            // Fall through to manual checks
+          }
+        } else {
+          // Fallback visibility checks for older browsers
+          const style = window.getComputedStyle(parent);
+          if (style.display === 'none' ||
+              style.visibility === 'hidden' ||
+              style.opacity === '0') {
+            return NodeFilter.FILTER_REJECT;
+          }
+
+          // Check if element has zero dimensions
+          const rect = parent.getBoundingClientRect();
+          if (rect.width === 0 && rect.height === 0) {
+            return NodeFilter.FILTER_REJECT;
+          }
         }
 
         return NodeFilter.FILTER_ACCEPT;

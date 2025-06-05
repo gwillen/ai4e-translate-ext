@@ -58,6 +58,7 @@
             <li>Right-click on this page and select "Translate Entire Page"</li>
             <li>Watch for the pause/resume button to appear</li>
             <li>Check the console for the logged list of nodes to be translated</li>
+            <li>Notice the count of filtered nodes (should show hidden elements were excluded)</li>
             <li>Test the pause/resume functionality</li>
             <li>Configure auto-pause in the extension options to test that feature</li>
         </ol>
@@ -66,6 +67,30 @@
     <div class="section">
         <h2>Selection Test</h2>
         <p>Select this text and translate it to test the selection translation feature with pause controls.</p>
+    </div>
+
+    <!-- Hidden elements to test visibility filtering -->
+    <div style="display: none;">
+        <h2>Hidden Section</h2>
+        <p>This text should not be translated because it's display:none</p>
+    </div>
+
+    <div style="visibility: hidden;">
+        <p>This text should not be translated because it's visibility:hidden</p>
+    </div>
+
+    <div style="opacity: 0;">
+        <p>This text should not be translated because it's opacity:0</p>
+    </div>
+
+    <div style="width: 0; height: 0; overflow: hidden;">
+        <p>This text should not be translated because it has zero dimensions</p>
+    </div>
+
+    <div class="section">
+        <h2>Visibility Test</h2>
+        <p>Check the console to see how many nodes were filtered out due to visibility. The hidden sections above should not be translated.</p>
+        <p style="color: green;">This visible text should be translated normally.</p>
     </div>
 </body>
 </html>
