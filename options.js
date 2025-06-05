@@ -19,6 +19,7 @@ const DEFAULT_SETTINGS = {
   showTranslationOverlay: true,
   preserveFormatting: true,
   continuousTranslation: false,
+  autoPauseAfterRequests: 0,
   maxTokens: 2000,
   temperature: 0.1,
   requestTimeout: 30,
@@ -59,6 +60,7 @@ function initializeOptions() {
     showTranslationOverlay: document.getElementById('show-translation-overlay'),
     preserveFormatting: document.getElementById('preserve-formatting'),
     continuousTranslation: document.getElementById('continuous-translation'),
+    autoPauseAfterRequests: document.getElementById('auto-pause-after-requests'),
 
     // Advanced Settings
     maxTokens: document.getElementById('max-tokens'),
@@ -102,6 +104,8 @@ function addEventListeners() {
   elements.autoDetectLanguage.addEventListener('change', handleSettingChange);
   elements.showTranslationOverlay.addEventListener('change', handleSettingChange);
   elements.preserveFormatting.addEventListener('change', handleSettingChange);
+  elements.continuousTranslation.addEventListener('change', handleSettingChange);
+  elements.autoPauseAfterRequests.addEventListener('input', handleSettingChange);
 
   // Advanced Settings
   elements.maxTokens.addEventListener('input', handleSettingChange);
@@ -136,6 +140,8 @@ async function loadSettings() {
     elements.autoDetectLanguage.checked = settings.autoDetectLanguage !== undefined ? settings.autoDetectLanguage : DEFAULT_SETTINGS.autoDetectLanguage;
     elements.showTranslationOverlay.checked = settings.showTranslationOverlay !== undefined ? settings.showTranslationOverlay : DEFAULT_SETTINGS.showTranslationOverlay;
     elements.preserveFormatting.checked = settings.preserveFormatting !== undefined ? settings.preserveFormatting : DEFAULT_SETTINGS.preserveFormatting;
+    elements.continuousTranslation.checked = settings.continuousTranslation !== undefined ? settings.continuousTranslation : DEFAULT_SETTINGS.continuousTranslation;
+    elements.autoPauseAfterRequests.value = settings.autoPauseAfterRequests !== undefined ? settings.autoPauseAfterRequests : DEFAULT_SETTINGS.autoPauseAfterRequests;
     elements.maxTokens.value = settings.maxTokens || DEFAULT_SETTINGS.maxTokens;
     elements.temperature.value = settings.temperature !== undefined ? settings.temperature : DEFAULT_SETTINGS.temperature;
     elements.requestTimeout.value = settings.requestTimeout || DEFAULT_SETTINGS.requestTimeout;
@@ -281,6 +287,8 @@ async function saveSettings() {
       autoDetectLanguage: elements.autoDetectLanguage.checked,
       showTranslationOverlay: elements.showTranslationOverlay.checked,
       preserveFormatting: elements.preserveFormatting.checked,
+      continuousTranslation: elements.continuousTranslation.checked,
+      autoPauseAfterRequests: parseInt(elements.autoPauseAfterRequests.value),
       maxTokens: parseInt(elements.maxTokens.value),
       temperature: parseFloat(elements.temperature.value),
       requestTimeout: parseInt(elements.requestTimeout.value),

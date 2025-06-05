@@ -164,6 +164,19 @@
               <small class="form-help">Automatically translate new content that appears on the page (lazy loading, infinite scroll, chat messages)</small>
             </div>
           </div>
+
+          <div class="form-group">
+            <label for="auto-pause-after-requests">Auto-pause after N requests (0 = never):</label>
+            <input
+              type="number"
+              id="auto-pause-after-requests"
+              class="form-control"
+              min="0"
+              max="100"
+              value="0"
+            >
+            <small class="form-help">Automatically pause translation after this many API requests for debugging</small>
+          </div>
         </section>
 
         <!-- Advanced Settings Section -->

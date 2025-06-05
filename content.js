@@ -16,6 +16,12 @@ let shouldStopTranslation = false;
 let continuousTranslationEnabled = false;
 let mutationObserver = null;
 
+// Pause/Resume and debugging state
+let isTranslationPaused = false;
+let translationRequestCount = 0;
+let autoPauseAfterRequests = 0; // 0 means never pause
+let pauseResumeButton = null;
+
 // Logging system for debugging
 const Logger = {
   debug: (message, ...args) => {
@@ -60,8 +66,123 @@ async function initializeContinuousTranslation() {
     if (options.continuousTranslation) {
       enableContinuousTranslation();
     }
+
+    // Initialize auto-pause setting
+    autoPauseAfterRequests = options.autoPauseAfterRequests || 0;
   } catch (error) {
     Logger.error('Failed to check continuous translation setting:', error);
+  }
+}
+
+/**
+ * Create and show pause/resume button for translation control
+ */
+function createPauseResumeButton() {
+  if (pauseResumeButton) {
+    return; // Button already exists
+  }
+
+  pauseResumeButton = document.createElement('div');
+  pauseResumeButton.id = 'ai-translate-pause-resume';
+  pauseResumeButton.innerHTML = `
+    <button id="pause-resume-btn" class="pause-resume-btn">
+      <span id="pause-resume-text">⏸️ Pause</span>
+    </button>
+  `;
+
+  pauseResumeButton.style.cssText = `
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 10002;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+  `;
+
+  const style = document.createElement('style');
+  style.textContent = `
+    .pause-resume-btn {
+      background: #4A90E2;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 16px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+    .pause-resume-btn:hover {
+      background: #357ABD;
+    }
+    .pause-resume-btn.paused {
+      background: #E74C3C;
+    }
+    .pause-resume-btn.paused:hover {
+      background: #C0392B;
+    }
+  `;
+  document.head.appendChild(style);
+
+  document.body.appendChild(pauseResumeButton);
+
+  // Add click handler
+  pauseResumeButton.querySelector('#pause-resume-btn').addEventListener('click', toggleTranslationPause);
+}
+
+/**
+ * Hide pause/resume button
+ */
+function hidePauseResumeButton() {
+  if (pauseResumeButton) {
+    pauseResumeButton.remove();
+    pauseResumeButton = null;
+  }
+}
+
+/**
+ * Toggle translation pause/resume state
+ */
+function toggleTranslationPause() {
+  isTranslationPaused = !isTranslationPaused;
+
+  const button = pauseResumeButton.querySelector('#pause-resume-btn');
+  const text = pauseResumeButton.querySelector('#pause-resume-text');
+
+  if (isTranslationPaused) {
+    button.classList.add('paused');
+    text.textContent = '▶️ Resume';
+    Logger.info('Translation paused by user');
+  } else {
+    button.classList.remove('paused');
+    text.textContent = '⏸️ Pause';
+    Logger.info('Translation resumed by user');
+  }
+}
+
+/**
+ * Check if translation should be paused due to request count
+ */
+function checkAutoPause() {
+  if (autoPauseAfterRequests > 0 && translationRequestCount >= autoPauseAfterRequests) {
+    if (!isTranslationPaused) {
+      isTranslationPaused = true;
+      const button = pauseResumeButton?.querySelector('#pause-resume-btn');
+      const text = pauseResumeButton?.querySelector('#pause-resume-text');
+
+      if (button && text) {
+        button.classList.add('paused');
+        text.textContent = '▶️ Resume';
+      }
+
+      Logger.info(`Translation auto-paused after ${translationRequestCount} requests`);
+      showNotification(`Translation paused after ${translationRequestCount} requests. Click Resume to continue.`);
+    }
   }
 }
 
@@ -292,8 +413,9 @@ function stopTranslation() {
     element.classList.remove('ai-translating');
   });
 
-  // Hide progress indicators
+  // Hide progress indicators and pause button
   hideProgressIndicator();
+  hidePauseResumeButton();
 
   showNotification('Translation stopped by user');
 }
@@ -351,13 +473,26 @@ async function translateTextNodes(textNodes, targetLanguage, context = 'page', t
   shouldStopTranslation = false;
   isTranslationActive = true;
 
+  // Reset request count for new translation session
+  if (context === 'page' || context === 'selection') {
+    translationRequestCount = 0;
+    isTranslationPaused = false;
+  }
+
   // Filter translatable nodes
   const translatableNodes = textNodes.filter(node => {
     const text = node.textContent.trim();
     return text.length >= 3 && !/^[\d\s\p{P}]+$/u.test(text);
   });
 
+  // Log the list of nodes to be translated with actual node objects for dev tools inspection
+  Logger.info(`Starting ${context} translation - ${translatableNodes.length} nodes to translate:`, translatableNodes);
   console.log(`${translatableNodes.length} nodes are translatable in ${context}`);
+
+  // Show pause/resume button for page and selection translations
+  if (context === 'page' || context === 'selection') {
+    createPauseResumeButton();
+  }
 
   if (translatableNodes.length === 0) {
     showNotification('No translatable text found');
@@ -380,6 +515,18 @@ async function translateTextNodes(textNodes, targetLanguage, context = 'page', t
     for (const batch of batches) {
       if (shouldStopTranslation) {
         Logger.info('Translation cancelled by user');
+        hidePauseResumeButton();
+        return;
+      }
+
+      // Check for pause state before processing each batch
+      while (isTranslationPaused && !shouldStopTranslation) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      if (shouldStopTranslation) {
+        Logger.info('Translation cancelled while paused');
+        hidePauseResumeButton();
         return;
       }
 
@@ -395,6 +542,7 @@ async function translateTextNodes(textNodes, targetLanguage, context = 'page', t
     }
 
     isTranslationActive = false;
+    hidePauseResumeButton();
     setTimeout(() => hideProgressIndicator(), 3000);
 
         if (!shouldStopTranslation) {
@@ -427,6 +575,7 @@ async function translateTextNodes(textNodes, targetLanguage, context = 'page', t
     showLoadingIndicator();
     await translateBatch(translatableNodes, targetLanguage, 0, translationMode);
     hideLoadingIndicator();
+    hidePauseResumeButton();
 
     if (!shouldStopTranslation) {
       showNotification(`Selection translated to ${targetLanguage}`);
@@ -450,6 +599,15 @@ async function translateBatch(batch, targetLanguage, batchIndex, translationMode
     }
   });
 
+  // Check for pause state before starting batch
+  while (isTranslationPaused && !shouldStopTranslation) {
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+
+  if (shouldStopTranslation) {
+    return;
+  }
+
   // Translate the batch
   const promises = batch.map(async (node, nodeIndex) => {
     const text = node.textContent.trim();
@@ -464,6 +622,10 @@ async function translateBatch(batch, targetLanguage, batchIndex, translationMode
         context: getSurroundingContext(node)
       });
 
+      // Increment request count and check auto-pause
+      translationRequestCount++;
+      Logger.debug(`Translation request #${translationRequestCount} for batch ${batchIndex}, node ${nodeIndex}`);
+
       const response = await browser.runtime.sendMessage({
         action: 'translateText',
         text: text,
@@ -473,6 +635,9 @@ async function translateBatch(batch, targetLanguage, batchIndex, translationMode
         context: getSurroundingContext(node),
         translationMode: translationMode
       });
+
+      // Check auto-pause after each request
+      checkAutoPause();
 
             if (!response.error && response.translatedText) {
         Logger.debug(`Translation Success [${requestId}]`, {
