@@ -136,7 +136,7 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return true; // Will respond asynchronously
 
     case 'translateText':
-      handleTranslateRequest(message.text, message.targetLanguage, message.requestId, message.batchIndex, message.context)
+      handleTranslateRequest(message.text, message.targetLanguage, message.requestId, message.batchIndex, message.context, message.translationMode)
         .then(sendResponse)
         .catch(error => {
           Logger.error(`Translation error [${message.requestId}]:`, error);
@@ -199,15 +199,44 @@ async function forwardProgressToPopup(message) {
 }
 
 /**
+ * Generate translation prompt based on mode
+ * @param {string} translationMode - Translation mode/style
+ * @param {string} targetLanguage - Target language
+ * @returns {string} Mode-specific system prompt
+ */
+function getTranslationPrompt(translationMode, targetLanguage) {
+  const basePrompt = `You are a professional translator. Translate the given text to ${targetLanguage}. Return only the translated text without any additional commentary.`;
+
+  switch (translationMode) {
+    case 'literal':
+      return basePrompt + ' Translate as literally as possible, preserving the exact meaning and structure of the original text.';
+
+    case 'word-by-word':
+      return basePrompt + ' Provide an extremely literal, word-by-word translation that maintains the exact order and structure of the original text, even if it sounds unnatural in the target language.';
+
+    case 'casual':
+      return basePrompt + ' Use a casual, conversational tone that sounds natural and relaxed in the target language.';
+
+    case 'formal':
+      return basePrompt + ' Use formal, professional language appropriate for business or academic contexts.';
+
+    case 'natural':
+    default:
+      return basePrompt + ' Provide a natural, fluent translation that sounds idiomatic in the target language while preserving the original meaning.';
+  }
+}
+
+/**
  * Handle translation request using OpenAI API
  * @param {string} text - Text to translate
  * @param {string} targetLanguage - Target language code
  * @param {string} requestId - Unique request identifier
  * @param {number} batchIndex - Batch index for grouping
  * @param {string} context - Surrounding context for better translation
+ * @param {string} translationMode - Translation mode/style to use
  * @returns {Promise<Object>} Translation result
  */
-async function handleTranslateRequest(text, targetLanguage = 'en', requestId = null, batchIndex = null, context = '') {
+async function handleTranslateRequest(text, targetLanguage = 'en', requestId = null, batchIndex = null, context = '', translationMode = 'natural') {
   try {
     const options = await getStoredOptions();
 
@@ -215,15 +244,16 @@ async function handleTranslateRequest(text, targetLanguage = 'en', requestId = n
       throw new Error('OpenAI API endpoint and key must be configured in options');
     }
 
-    Logger.debug(`Processing translation request [${requestId}]`, {
+        Logger.debug(`Processing translation request [${requestId}]`, {
       text: text,
       targetLanguage: targetLanguage,
       batchIndex: batchIndex,
-      context: context
+      context: context,
+      translationMode: translationMode
     });
 
-    // Build enhanced prompt with context
-    let systemPrompt = `You are a professional translator. Translate the given text to ${targetLanguage}. Preserve formatting and return only the translated text without any additional commentary.`;
+    // Build enhanced prompt with context and mode
+    let systemPrompt = getTranslationPrompt(translationMode, targetLanguage);
 
     let userPrompt = text;
     if (context && context.length > 0) {

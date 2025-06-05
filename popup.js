@@ -23,6 +23,7 @@ function initializePopup() {
     statusText: document.getElementById('status-text'),
     sourceText: document.getElementById('source-text'),
     targetLanguage: document.getElementById('target-language'),
+    translationMode: document.getElementById('translation-mode'),
     translateBtn: document.getElementById('translate-btn'),
     translateBtnText: document.getElementById('translate-btn-text'),
     translateBtnSpinner: document.getElementById('translate-btn-spinner'),
@@ -73,8 +74,9 @@ function addEventListeners() {
   elements.optionsBtn.addEventListener('click', openOptions);
   elements.helpBtn.addEventListener('click', openHelp);
 
-  // Language selection
+  // Language and mode selection
   elements.targetLanguage.addEventListener('change', handleLanguageChange);
+  elements.translationMode.addEventListener('change', handleTranslationModeChange);
 }
 
 /**
@@ -85,10 +87,13 @@ async function loadInitialState() {
     // Check configuration status
     await updateConfigurationStatus();
 
-    // Load saved target language
+    // Load saved target language and translation mode
     const options = await getOptions();
     if (options.defaultTargetLanguage) {
       elements.targetLanguage.value = options.defaultTargetLanguage;
+    }
+    if (options.defaultTranslationMode) {
+      elements.translationMode.value = options.defaultTranslationMode;
     }
 
     console.log('Popup initialized successfully');
@@ -160,13 +165,14 @@ function handleSourceTextKeydown(event) {
 async function handleTranslate() {
   const sourceText = elements.sourceText.value.trim();
   const targetLanguage = elements.targetLanguage.value;
+  const translationMode = elements.translationMode.value;
 
   if (!sourceText) {
     showError('Please enter text to translate');
     return;
   }
 
-  console.log(`Translating text to ${targetLanguage}:`, sourceText.substring(0, 50) + '...');
+  console.log(`Translating text to ${targetLanguage} (${translationMode} style):`, sourceText.substring(0, 50) + '...');
 
   // Show loading state
   setTranslateButtonLoading(true);
@@ -177,7 +183,8 @@ async function handleTranslate() {
     const response = await browser.runtime.sendMessage({
       action: 'translateText',
       text: sourceText,
-      targetLanguage: targetLanguage
+      targetLanguage: targetLanguage,
+      translationMode: translationMode
     });
 
     setTranslateButtonLoading(false);
@@ -199,7 +206,8 @@ async function handleTranslate() {
  * Handle translate page button click
  */
 async function handleTranslatePage() {
-  console.log('Starting page translation...');
+  const translationMode = elements.translationMode.value;
+  console.log(`Starting page translation (${translationMode} style)...`);
 
   // Show loading state
   setTranslatePageButtonLoading(true);
@@ -216,7 +224,8 @@ async function handleTranslatePage() {
 
     // Send message to content script to translate the page
     await browser.tabs.sendMessage(activeTab.id, {
-      action: 'translatePage'
+      action: 'translatePage',
+      translationMode: translationMode
     });
 
     setTranslatePageButtonLoading(false);
@@ -401,6 +410,24 @@ async function handleLanguageChange() {
     });
   } catch (error) {
     console.error('Failed to save language preference:', error);
+  }
+}
+
+/**
+ * Handle translation mode change
+ */
+async function handleTranslationModeChange() {
+  const selectedMode = elements.translationMode.value;
+  console.log('Translation mode changed to:', selectedMode);
+
+  try {
+    // Save the selected mode as default
+    await browser.storage.sync.set({
+      defaultTranslationMode: selectedMode
+    });
+    console.log('Default translation mode saved:', selectedMode);
+  } catch (error) {
+    console.error('Error saving translation mode preference:', error);
   }
 }
 

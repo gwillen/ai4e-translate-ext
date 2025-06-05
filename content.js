@@ -101,8 +101,11 @@ async function translateSelectedText() {
     const options = await browser.runtime.sendMessage({ action: 'getOptions' });
     const targetLanguage = options.defaultTargetLanguage || 'en';
 
+    // Get default translation mode from options
+    const translationMode = options.defaultTranslationMode || 'natural';
+
     // Use the same translation logic as page translation
-    await translateTextNodes(textNodes, targetLanguage, 'selection');
+    await translateTextNodes(textNodes, targetLanguage, 'selection', translationMode);
 
   } catch (error) {
     console.error('Translation failed:', error);
@@ -338,8 +341,12 @@ function getTextNodesInRange(range) {
 
 /**
  * Unified function to translate a collection of text nodes
+ * @param {Array} textNodes - Array of text nodes to translate
+ * @param {string} targetLanguage - Target language code
+ * @param {string} context - Translation context ('page', 'selection', 'continuous')
+ * @param {string} translationMode - Translation mode/style to use
  */
-async function translateTextNodes(textNodes, targetLanguage, context = 'page') {
+async function translateTextNodes(textNodes, targetLanguage, context = 'page', translationMode = 'natural') {
   // Reset translation state
   shouldStopTranslation = false;
   isTranslationActive = true;
@@ -378,7 +385,7 @@ async function translateTextNodes(textNodes, targetLanguage, context = 'page') {
 
       updateProgress(translatedCount, translatableNodes.length, batchIndex + 1, totalBatches, batch);
 
-      await translateBatch(batch, targetLanguage, batchIndex);
+      await translateBatch(batch, targetLanguage, batchIndex, translationMode);
       translatedCount += batch.length;
       batchIndex++;
 
@@ -403,7 +410,7 @@ async function translateTextNodes(textNodes, targetLanguage, context = 'page') {
     for (const batch of batches) {
       if (shouldStopTranslation) break;
 
-      await translateBatch(batch, targetLanguage, batchIndex);
+      await translateBatch(batch, targetLanguage, batchIndex, translationMode);
       batchIndex++;
 
       // Shorter delay for continuous translation
@@ -418,7 +425,7 @@ async function translateTextNodes(textNodes, targetLanguage, context = 'page') {
   } else {
     // For selection, translate immediately without progress UI
     showLoadingIndicator();
-    await translateBatch(translatableNodes, targetLanguage, 0);
+    await translateBatch(translatableNodes, targetLanguage, 0, translationMode);
     hideLoadingIndicator();
 
     if (!shouldStopTranslation) {
@@ -429,8 +436,12 @@ async function translateTextNodes(textNodes, targetLanguage, context = 'page') {
 
 /**
  * Translate a batch of text nodes
+ * @param {Array} batch - Array of text nodes to translate
+ * @param {string} targetLanguage - Target language code
+ * @param {number} batchIndex - Index of the current batch
+ * @param {string} translationMode - Translation mode/style to use
  */
-async function translateBatch(batch, targetLanguage, batchIndex) {
+async function translateBatch(batch, targetLanguage, batchIndex, translationMode = 'natural') {
   // Highlight current batch being translated (for page translation)
   batch.forEach(node => {
     const element = node.parentElement;
@@ -459,7 +470,8 @@ async function translateBatch(batch, targetLanguage, batchIndex) {
         targetLanguage: targetLanguage,
         requestId: requestId,
         batchIndex: batchIndex,
-        context: getSurroundingContext(node)
+        context: getSurroundingContext(node),
+        translationMode: translationMode
       });
 
             if (!response.error && response.translatedText) {
@@ -685,7 +697,7 @@ function handleMessage(message) {
       break;
 
     case 'translatePage':
-      translateEntirePage();
+      translateEntirePage(message.translationMode);
       break;
 
     case 'stopTranslation':
@@ -701,9 +713,10 @@ function handleMessage(message) {
 
 /**
  * Translate entire page by finding and translating all text content
+ * @param {string} translationMode - Translation mode/style to use
  */
-async function translateEntirePage() {
-  console.log('Starting full page translation...');
+async function translateEntirePage(translationMode = 'natural') {
+  Logger.info(`Starting full page translation with ${translationMode} mode...`);
   hideLoadingIndicator(); // Hide the basic loading indicator
 
   try {
@@ -713,13 +726,13 @@ async function translateEntirePage() {
 
     // Find all text nodes in the page
     const textNodes = getTextNodes(document.body);
-    console.log(`Found ${textNodes.length} text nodes to translate`);
+    Logger.info(`Found ${textNodes.length} text nodes to translate`);
 
-    // Use the unified translation logic
-    await translateTextNodes(textNodes, targetLanguage, 'page');
+    // Use the unified translation logic with translation mode
+    await translateTextNodes(textNodes, targetLanguage, 'page', translationMode);
 
   } catch (error) {
-    console.error('Page translation failed:', error);
+    Logger.error('Page translation failed:', error);
     hideProgressIndicator();
     showError('Page translation failed. Please check your API configuration.');
   }
@@ -810,10 +823,11 @@ function showTranslationMenu(element, x, y) {
         <div class="text-content">${escapeHtml(translatedText)}</div>
       </div>
       <div class="menu-actions">
-        <button class="action-btn" data-action="literal">Literal Translation</button>
         <button class="action-btn" data-action="natural">Natural Translation</button>
-        <button class="action-btn" data-action="formal">Formal Style</button>
+        <button class="action-btn" data-action="literal">Literal Translation</button>
+        <button class="action-btn" data-action="word-by-word">Word-by-Word</button>
         <button class="action-btn" data-action="casual">Casual Style</button>
+        <button class="action-btn" data-action="formal">Formal Style</button>
         <button class="action-btn" data-action="revert">Restore Original</button>
         <button class="action-btn primary" data-action="custom">Custom Prompt</button>
       </div>
@@ -869,48 +883,31 @@ function handleMenuOutsideClick(event) {
 async function handleTranslationAction(element, action, originalText, targetLanguage) {
   hideTranslationMenu();
 
-  let prompt = '';
-
-  switch (action) {
-    case 'literal':
-      prompt = `Translate this text to ${targetLanguage} as literally as possible, preserving the exact meaning and structure: "${originalText}"`;
-      break;
-    case 'natural':
-      prompt = `Translate this text to ${targetLanguage} in the most natural, fluent way: "${originalText}"`;
-      break;
-    case 'formal':
-      prompt = `Translate this text to ${targetLanguage} using formal, professional language: "${originalText}"`;
-      break;
-    case 'casual':
-      prompt = `Translate this text to ${targetLanguage} using casual, conversational language: "${originalText}"`;
-      break;
-    case 'revert':
-      // Restore original text
-      const textNode = getFirstTextNode(element);
-      if (textNode) {
-        textNode.textContent = originalText;
-        element.classList.remove('ai-translated', 'ai-hover-enabled');
-        element.removeAttribute('data-original-text');
-        element.removeAttribute('data-translated-text');
-        element.removeAttribute('data-target-language');
-        element.removeAttribute('data-translation-batch');
-      }
-      showNotification('Original text restored');
-      return;
-    case 'custom':
-      const customPrompt = prompt('Enter custom translation instructions:');
-      if (!customPrompt) return;
-      prompt = `${customPrompt} Translate to ${targetLanguage}: "${originalText}"`;
-      break;
+  if (action === 'revert') {
+    // Restore original text
+    const textNode = getFirstTextNode(element);
+    if (textNode) {
+      textNode.textContent = originalText;
+      element.classList.remove('ai-translated', 'ai-hover-enabled');
+      element.removeAttribute('data-original-text');
+      element.removeAttribute('data-translated-text');
+      element.removeAttribute('data-target-language');
+      element.removeAttribute('data-translation-batch');
+    }
+    showNotification('Original text restored');
+    return;
   }
 
-  if (prompt) {
+  if (action === 'custom') {
+    const customPrompt = prompt('Enter custom translation instructions:');
+    if (!customPrompt) return;
+
     showLoadingIndicator();
 
     try {
       const response = await browser.runtime.sendMessage({
         action: 'translateText',
-        text: prompt,
+        text: `${customPrompt} Translate to ${targetLanguage}: "${originalText}"`,
         targetLanguage: targetLanguage
       });
 
@@ -923,6 +920,40 @@ async function handleTranslationAction(element, action, originalText, targetLang
           element.setAttribute('data-translated-text', response.translatedText);
         }
         showNotification('Translation updated');
+      } else {
+        showError(response.error || 'Translation failed');
+      }
+    } catch (error) {
+      hideLoadingIndicator();
+      showError('Translation failed');
+    }
+    return;
+  }
+
+  // For unified translation modes, use the translation mode system
+  if (['natural', 'literal', 'word-by-word', 'casual', 'formal'].includes(action)) {
+    showLoadingIndicator();
+
+    try {
+      const response = await browser.runtime.sendMessage({
+        action: 'translateText',
+        text: originalText,
+        targetLanguage: targetLanguage,
+        translationMode: action,
+        requestId: `interactive-${Date.now()}`,
+        batchIndex: 0,
+        context: getSurroundingContext(getFirstTextNode(element))
+      });
+
+      hideLoadingIndicator();
+
+      if (!response.error && response.translatedText) {
+        const textNode = getFirstTextNode(element);
+        if (textNode) {
+          textNode.textContent = response.translatedText;
+          element.setAttribute('data-translated-text', response.translatedText);
+        }
+        showNotification(`Translation updated (${action} style)`);
       } else {
         showError(response.error || 'Translation failed');
       }
@@ -1134,9 +1165,12 @@ async function handleMutations(mutations) {
         const options = await browser.runtime.sendMessage({ action: 'getOptions' });
         const targetLanguage = options.defaultTargetLanguage || 'en';
 
+        // Get default translation mode
+        const translationMode = options.defaultTranslationMode || 'natural';
+
         // Use a small delay to batch rapid changes
         setTimeout(() => {
-          translateTextNodes(untranslatedNodes, targetLanguage, 'continuous');
+          translateTextNodes(untranslatedNodes, targetLanguage, 'continuous', translationMode);
         }, 1000);
       } catch (error) {
         Logger.error('Failed to get options for continuous translation:', error);

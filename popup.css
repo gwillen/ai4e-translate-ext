@@ -145,19 +145,22 @@ body {
   box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
 }
 
-.language-selector {
+.language-selector,
+.translation-mode-selector {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.language-selector label {
+.language-selector label,
+.translation-mode-selector label {
   font-size: 13px;
   font-weight: 500;
   color: #666;
 }
 
-#target-language {
+#target-language,
+#translation-mode {
   padding: 10px 12px;
   border: 1px solid #ddd;
   border-radius: 6px;
@@ -168,7 +171,8 @@ body {
   transition: border-color 0.2s ease;
 }
 
-#target-language:focus {
+#target-language:focus,
+#translation-mode:focus {
   outline: none;
   border-color: #4A90E2;
   box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
@@ -534,14 +538,16 @@ body {
   }
 
   #source-text,
-  #target-language {
+  #target-language,
+  #translation-mode {
     background: #2d2d2d;
     border-color: #555;
     color: #e8e8e8;
   }
 
   #source-text:focus,
-  #target-language:focus {
+  #target-language:focus,
+  #translation-mode:focus {
     border-color: #4A90E2;
     box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
   }
@@ -611,7 +617,8 @@ body {
     color: #28a745;
   }
 
-  .language-selector label {
+  .language-selector label,
+  .translation-mode-selector label {
     color: #ccc;
   }
 
