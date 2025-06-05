@@ -474,6 +474,23 @@
   margin-top: 4px;
 }
 
+#ai-translate-progress .progress-stop-btn {
+  margin-top: 8px;
+  padding: 4px 8px;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  width: 100%;
+}
+
+#ai-translate-progress .progress-stop-btn:hover {
+  background: #c82333;
+}
+
 /* Dark mode support for progress elements */
 @media (prefers-color-scheme: dark) {
   .ai-translating {
@@ -506,6 +523,14 @@
 
   #ai-translate-progress .current-batch {
     color: #6bb6ff;
+  }
+
+  #ai-translate-progress .progress-stop-btn {
+    background: #dc3545;
+  }
+
+  #ai-translate-progress .progress-stop-btn:hover {
+    background: #c82333;
   }
 
   /* Translation menu - Dark mode */

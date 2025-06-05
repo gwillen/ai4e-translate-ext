@@ -13,6 +13,24 @@ let selectedText = '';
 // Translation state management
 let isTranslationActive = false;
 let shouldStopTranslation = false;
+let continuousTranslationEnabled = false;
+let mutationObserver = null;
+
+// Logging system for debugging
+const Logger = {
+  debug: (message, ...args) => {
+    console.debug(`[AI-Translate] ${message}`, ...args);
+  },
+  info: (message, ...args) => {
+    console.info(`[AI-Translate] ${message}`, ...args);
+  },
+  warn: (message, ...args) => {
+    console.warn(`[AI-Translate] ${message}`, ...args);
+  },
+  error: (message, ...args) => {
+    console.error(`[AI-Translate] ${message}`, ...args);
+  }
+};
 
 // Initialize content script
 initializeContentScript();
@@ -21,13 +39,30 @@ initializeContentScript();
  * Initialize the content script
  */
 function initializeContentScript() {
-  console.log('Initializing AI Translation content script');
+  Logger.info('Initializing AI Translation content script');
 
   // Listen for messages from background script
   browser.runtime.onMessage.addListener(handleMessage);
 
   // Add click event listener for translated elements
   document.addEventListener('click', handleTranslatedElementClick);
+
+  // Initialize continuous translation if enabled
+  initializeContinuousTranslation();
+}
+
+/**
+ * Initialize continuous translation monitoring
+ */
+async function initializeContinuousTranslation() {
+  try {
+    const options = await browser.runtime.sendMessage({ action: 'getOptions' });
+    if (options.continuousTranslation) {
+      enableContinuousTranslation();
+    }
+  } catch (error) {
+    Logger.error('Failed to check continuous translation setting:', error);
+  }
 }
 
 /**
@@ -152,10 +187,14 @@ function showProgressIndicator(totalElements, targetLanguage) {
       <span><span id="progress-completed">0</span> of <span id="progress-total">${totalElements}</span> elements</span>
       <span id="progress-percentage">0%</span>
     </div>
-    <div class="current-batch" id="current-batch-info">Preparing translation...</div>
+        <div class="current-batch" id="current-batch-info">Preparing translation...</div>
+    <button class="progress-stop-btn" id="progress-stop-btn">Stop Translation</button>
   `;
 
   document.body.appendChild(progressDiv);
+
+  // Add stop button event listener
+  progressDiv.querySelector('#progress-stop-btn').addEventListener('click', stopTranslation);
 
   // Send initial progress to popup
   browser.runtime.sendMessage({
@@ -320,28 +359,30 @@ async function translateTextNodes(textNodes, targetLanguage, context = 'page') {
 
   // Show appropriate progress indicator
   if (context === 'page') {
-    const batchSize = 5;
-    const totalBatches = Math.ceil(translatableNodes.length / batchSize);
+    // Create smarter batches grouped by proximity and context
+    const batches = createSmartBatches(translatableNodes);
+    const totalBatches = batches.length;
     showProgressIndicator(translatableNodes.length, targetLanguage);
+
+    Logger.info(`Created ${totalBatches} smart batches for ${translatableNodes.length} elements`);
 
     let translatedCount = 0;
     let batchIndex = 0;
 
-    // Translate in batches for page translation
-    for (let i = 0; i < translatableNodes.length; i += batchSize) {
+    // Translate in contextual batches for page translation
+    for (const batch of batches) {
       if (shouldStopTranslation) {
-        console.log('Translation cancelled by user');
+        Logger.info('Translation cancelled by user');
         return;
       }
 
-      const batch = translatableNodes.slice(i, i + batchSize);
       updateProgress(translatedCount, translatableNodes.length, batchIndex + 1, totalBatches, batch);
 
       await translateBatch(batch, targetLanguage, batchIndex);
       translatedCount += batch.length;
       batchIndex++;
 
-      if (i + batchSize < translatableNodes.length) {
+      if (batchIndex < totalBatches) {
         await new Promise(resolve => setTimeout(resolve, 800));
       }
     }
@@ -349,8 +390,30 @@ async function translateTextNodes(textNodes, targetLanguage, context = 'page') {
     isTranslationActive = false;
     setTimeout(() => hideProgressIndicator(), 3000);
 
-    if (!shouldStopTranslation) {
+        if (!shouldStopTranslation) {
       showNotification(`Page translation complete! ${translatedCount} elements translated to ${targetLanguage}`);
+    }
+  } else if (context === 'continuous') {
+    // For continuous translation, translate silently in background
+    Logger.info(`Starting continuous translation of ${translatableNodes.length} new elements`);
+
+    const batches = createSmartBatches(translatableNodes);
+    let batchIndex = 0;
+
+    for (const batch of batches) {
+      if (shouldStopTranslation) break;
+
+      await translateBatch(batch, targetLanguage, batchIndex);
+      batchIndex++;
+
+      // Shorter delay for continuous translation
+      if (batchIndex < batches.length) {
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+    }
+
+    if (!shouldStopTranslation && translatableNodes.length > 0) {
+      Logger.info(`Continuous translation complete: ${translatableNodes.length} elements translated`);
     }
   } else {
     // For selection, translate immediately without progress UI
@@ -377,24 +440,49 @@ async function translateBatch(batch, targetLanguage, batchIndex) {
   });
 
   // Translate the batch
-  const promises = batch.map(async (node) => {
+  const promises = batch.map(async (node, nodeIndex) => {
     const text = node.textContent.trim();
+    const requestId = `batch-${batchIndex}-node-${nodeIndex}-${Date.now()}`;
 
     try {
+      Logger.debug(`Translation Request [${requestId}]`, {
+        batchIndex: batchIndex,
+        nodeIndex: nodeIndex,
+        originalText: text,
+        targetLanguage: targetLanguage,
+        context: getSurroundingContext(node)
+      });
+
       const response = await browser.runtime.sendMessage({
         action: 'translateText',
         text: text,
-        targetLanguage: targetLanguage
+        targetLanguage: targetLanguage,
+        requestId: requestId,
+        batchIndex: batchIndex,
+        context: getSurroundingContext(node)
       });
 
-      if (!response.error && response.translatedText) {
+            if (!response.error && response.translatedText) {
+        Logger.debug(`Translation Success [${requestId}]`, {
+          translatedText: response.translatedText,
+          fullResponse: response
+        });
+
         // Preserve whitespace structure when replacing text
         const originalText = node.textContent;
         const leadingWhitespace = originalText.match(/^\s*/)[0];
         const trailingWhitespace = originalText.match(/\s*$/)[0];
         const trimmedTranslation = response.translatedText.trim();
+        const finalText = leadingWhitespace + trimmedTranslation + trailingWhitespace;
 
-        node.textContent = leadingWhitespace + trimmedTranslation + trailingWhitespace;
+        node.textContent = finalText;
+
+        Logger.debug(`Text Replacement [${requestId}]`, {
+          originalText: originalText,
+          finalText: finalText,
+          leadingWhitespace: leadingWhitespace,
+          trailingWhitespace: trailingWhitespace
+        });
 
         // Update element styling
         const element = node.parentElement;
@@ -407,6 +495,7 @@ async function translateBatch(batch, targetLanguage, batchIndex) {
           element.setAttribute('data-original-text', originalText.trim());
           element.setAttribute('data-translated-text', trimmedTranslation);
           element.setAttribute('data-target-language', targetLanguage);
+          element.setAttribute('data-request-id', requestId);
         }
       } else {
         // Remove translating class if translation failed
@@ -601,6 +690,11 @@ function handleMessage(message) {
 
     case 'stopTranslation':
       stopTranslation();
+      break;
+
+    case 'logMessage':
+      // Forward log from background script
+      Logger[message.level](`[BG] ${message.message}`, ...message.args);
       break;
   }
 }
@@ -840,6 +934,112 @@ async function handleTranslationAction(element, action, originalText, targetLang
 }
 
 /**
+ * Create smart batches that group related text nodes together
+ */
+function createSmartBatches(nodes) {
+  const batches = [];
+  let currentBatch = [];
+  let currentParent = null;
+  const maxBatchSize = 8; // Increased from 5 for better context
+  const maxBatchChars = 1000; // Character limit per batch
+  let currentBatchChars = 0;
+
+  for (const node of nodes) {
+    const element = node.parentElement;
+    const text = node.textContent.trim();
+    const textLength = text.length;
+
+    // Check if we should start a new batch
+    const shouldStartNewBatch =
+      currentBatch.length >= maxBatchSize ||
+      currentBatchChars + textLength > maxBatchChars ||
+      (currentParent && !isRelatedElement(currentParent, element));
+
+    if (shouldStartNewBatch && currentBatch.length > 0) {
+      batches.push([...currentBatch]);
+      currentBatch = [];
+      currentBatchChars = 0;
+    }
+
+    // Add node to current batch
+    currentBatch.push(node);
+    currentBatchChars += textLength;
+    currentParent = element;
+
+    // Find the most meaningful parent for context grouping
+    let contextParent = element;
+    while (contextParent && contextParent.parentElement !== document.body) {
+      const tagName = contextParent.tagName.toLowerCase();
+      if (['p', 'div', 'section', 'article', 'li', 'blockquote'].includes(tagName)) {
+        break;
+      }
+      contextParent = contextParent.parentElement;
+    }
+    currentParent = contextParent || element;
+  }
+
+  // Add remaining batch
+  if (currentBatch.length > 0) {
+    batches.push(currentBatch);
+  }
+
+  Logger.debug('Smart batching complete', {
+    totalNodes: nodes.length,
+    totalBatches: batches.length,
+    batchSizes: batches.map(b => b.length),
+    avgBatchSize: batches.reduce((sum, b) => sum + b.length, 0) / batches.length
+  });
+
+  return batches;
+}
+
+/**
+ * Check if two elements are contextually related for batching
+ */
+function isRelatedElement(element1, element2) {
+  if (!element1 || !element2) return false;
+
+  // Same element or direct siblings
+  if (element1 === element2 || element1.parentElement === element2.parentElement) {
+    return true;
+  }
+
+  // Both are in the same paragraph/container
+  const container1 = element1.closest('p, div, section, article, li, blockquote');
+  const container2 = element2.closest('p, div, section, article, li, blockquote');
+
+  return container1 === container2;
+}
+
+/**
+ * Get surrounding context for a text node to provide better translation context
+ */
+function getSurroundingContext(node) {
+  const element = node.parentElement;
+  if (!element) return '';
+
+  // Get the containing element's text with some context
+  let contextElement = element;
+
+  // Try to find a meaningful parent (paragraph, div, section, etc.)
+  while (contextElement && contextElement !== document.body) {
+    const tagName = contextElement.tagName.toLowerCase();
+    if (['p', 'div', 'section', 'article', 'li', 'td', 'th', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tagName)) {
+      break;
+    }
+    contextElement = contextElement.parentElement;
+  }
+
+  if (contextElement && contextElement !== element) {
+    const contextText = contextElement.textContent.trim();
+    // Return up to 200 characters of context
+    return contextText.length > 200 ? contextText.substring(0, 200) + '...' : contextText;
+  }
+
+  return '';
+}
+
+/**
  * Get the first text node within an element
  */
 function getFirstTextNode(element) {
@@ -850,6 +1050,99 @@ function getFirstTextNode(element) {
     false
   );
   return walker.nextNode();
+}
+
+/**
+ * Enable continuous translation monitoring
+ */
+function enableContinuousTranslation() {
+  if (mutationObserver) {
+    Logger.debug('Continuous translation already enabled');
+    return;
+  }
+
+  Logger.info('Enabling continuous translation monitoring');
+  continuousTranslationEnabled = true;
+
+  mutationObserver = new MutationObserver((mutations) => {
+    handleMutations(mutations);
+  });
+
+  mutationObserver.observe(document.body, {
+    childList: true,
+    subtree: true,
+    characterData: true
+  });
+}
+
+/**
+ * Disable continuous translation monitoring
+ */
+function disableContinuousTranslation() {
+  if (mutationObserver) {
+    Logger.info('Disabling continuous translation monitoring');
+    mutationObserver.disconnect();
+    mutationObserver = null;
+  }
+  continuousTranslationEnabled = false;
+}
+
+/**
+ * Handle DOM mutations for continuous translation
+ */
+async function handleMutations(mutations) {
+  if (!continuousTranslationEnabled || isTranslationActive) {
+    return;
+  }
+
+  const newTextNodes = [];
+
+  for (const mutation of mutations) {
+    if (mutation.type === 'childList') {
+      // Check for new elements
+      for (const node of mutation.addedNodes) {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          const textNodes = getTextNodes(node);
+          newTextNodes.push(...textNodes);
+        } else if (node.nodeType === Node.TEXT_NODE) {
+          const text = node.textContent.trim();
+          if (text.length >= 3 && !/^[\d\s\p{P}]+$/u.test(text)) {
+            newTextNodes.push(node);
+          }
+        }
+      }
+    } else if (mutation.type === 'characterData') {
+      // Text content changed
+      const text = mutation.target.textContent.trim();
+      if (text.length >= 3 && !/^[\d\s\p{P}]+$/u.test(text)) {
+        newTextNodes.push(mutation.target);
+      }
+    }
+  }
+
+  if (newTextNodes.length > 0) {
+    // Filter out already translated nodes
+    const untranslatedNodes = newTextNodes.filter(node => {
+      const element = node.parentElement;
+      return element && !element.classList.contains('ai-translated');
+    });
+
+    if (untranslatedNodes.length > 0) {
+      Logger.info(`Found ${untranslatedNodes.length} new text nodes for continuous translation`);
+
+      try {
+        const options = await browser.runtime.sendMessage({ action: 'getOptions' });
+        const targetLanguage = options.defaultTargetLanguage || 'en';
+
+        // Use a small delay to batch rapid changes
+        setTimeout(() => {
+          translateTextNodes(untranslatedNodes, targetLanguage, 'continuous');
+        }, 1000);
+      } catch (error) {
+        Logger.error('Failed to get options for continuous translation:', error);
+      }
+    }
+  }
 }
 
 /**

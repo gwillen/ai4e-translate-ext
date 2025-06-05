@@ -18,6 +18,7 @@ const DEFAULT_SETTINGS = {
   autoDetectLanguage: true,
   showTranslationOverlay: true,
   preserveFormatting: true,
+  continuousTranslation: false,
   maxTokens: 2000,
   temperature: 0.1,
   requestTimeout: 30,
@@ -57,6 +58,7 @@ function initializeOptions() {
     autoDetectLanguage: document.getElementById('auto-detect-language'),
     showTranslationOverlay: document.getElementById('show-translation-overlay'),
     preserveFormatting: document.getElementById('preserve-formatting'),
+    continuousTranslation: document.getElementById('continuous-translation'),
 
     // Advanced Settings
     maxTokens: document.getElementById('max-tokens'),

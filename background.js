@@ -5,6 +5,45 @@
 
 console.log('AI Translation Extension: Background script loaded');
 
+// Logging system that forwards to content script
+const Logger = {
+  debug: (message, ...args) => {
+    console.debug(`[AI-Translate-BG] ${message}`, ...args);
+    forwardLogToContent('debug', message, args);
+  },
+  info: (message, ...args) => {
+    console.info(`[AI-Translate-BG] ${message}`, ...args);
+    forwardLogToContent('info', message, args);
+  },
+  warn: (message, ...args) => {
+    console.warn(`[AI-Translate-BG] ${message}`, ...args);
+    forwardLogToContent('warn', message, args);
+  },
+  error: (message, ...args) => {
+    console.error(`[AI-Translate-BG] ${message}`, ...args);
+    forwardLogToContent('error', message, args);
+  }
+};
+
+/**
+ * Forward log messages to content script for debugging
+ */
+async function forwardLogToContent(level, message, args) {
+  try {
+    const tabs = await browser.tabs.query({ active: true, currentWindow: true });
+    if (tabs.length > 0) {
+      await browser.tabs.sendMessage(tabs[0].id, {
+        action: 'logMessage',
+        level: level,
+        message: message,
+        args: args
+      });
+    }
+  } catch (error) {
+    // Ignore if content script is not ready
+  }
+}
+
 // Initialize extension when installed
 browser.runtime.onInstalled.addListener((details) => {
   console.log('Extension installed/updated:', details.reason);
@@ -97,10 +136,10 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return true; // Will respond asynchronously
 
     case 'translateText':
-      handleTranslateRequest(message.text, message.targetLanguage)
+      handleTranslateRequest(message.text, message.targetLanguage, message.requestId, message.batchIndex, message.context)
         .then(sendResponse)
         .catch(error => {
-          console.error('Translation error:', error);
+          Logger.error(`Translation error [${message.requestId}]:`, error);
           sendResponse({ error: error.message });
         });
       return true; // Will respond asynchronously
@@ -163,9 +202,12 @@ async function forwardProgressToPopup(message) {
  * Handle translation request using OpenAI API
  * @param {string} text - Text to translate
  * @param {string} targetLanguage - Target language code
+ * @param {string} requestId - Unique request identifier
+ * @param {number} batchIndex - Batch index for grouping
+ * @param {string} context - Surrounding context for better translation
  * @returns {Promise<Object>} Translation result
  */
-async function handleTranslateRequest(text, targetLanguage = 'en') {
+async function handleTranslateRequest(text, targetLanguage = 'en', requestId = null, batchIndex = null, context = '') {
   try {
     const options = await getStoredOptions();
 
@@ -173,7 +215,42 @@ async function handleTranslateRequest(text, targetLanguage = 'en') {
       throw new Error('OpenAI API endpoint and key must be configured in options');
     }
 
-    console.log(`Translating text to ${targetLanguage}:`, text.substring(0, 100) + '...');
+    Logger.debug(`Processing translation request [${requestId}]`, {
+      text: text,
+      targetLanguage: targetLanguage,
+      batchIndex: batchIndex,
+      context: context
+    });
+
+    // Build enhanced prompt with context
+    let systemPrompt = `You are a professional translator. Translate the given text to ${targetLanguage}. Preserve formatting and return only the translated text without any additional commentary.`;
+
+    let userPrompt = text;
+    if (context && context.length > 0) {
+      systemPrompt += ` Use the provided context to ensure accurate translation of terms and maintain consistency.`;
+      userPrompt = `Context: "${context}"\n\nTranslate this text: "${text}"`;
+    }
+
+    const requestBody = {
+      model: options.modelName || 'gpt-3.5-turbo',
+      messages: [
+        {
+          role: 'system',
+          content: systemPrompt
+        },
+        {
+          role: 'user',
+          content: userPrompt
+        }
+      ],
+      max_tokens: options.maxTokens || 2000,
+      temperature: options.temperature || 0.1
+    };
+
+    Logger.debug(`API Request [${requestId}]`, {
+      endpoint: options.apiEndpoint,
+      requestBody: requestBody
+    });
 
     // Make API request to OpenAI
     const response = await fetch(options.apiEndpoint, {
@@ -182,21 +259,7 @@ async function handleTranslateRequest(text, targetLanguage = 'en') {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${options.apiKey}`
       },
-      body: JSON.stringify({
-        model: options.modelName || 'gpt-3.5-turbo',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a professional translator. Translate the given text to ${targetLanguage}. Preserve formatting and return only the translated text without any additional commentary.`
-          },
-          {
-            role: 'user',
-            content: text
-          }
-        ],
-        max_tokens: options.maxTokens || 2000,
-        temperature: options.temperature || 0.1
-      })
+      body: JSON.stringify(requestBody)
     });
 
     if (!response.ok) {
@@ -204,17 +267,32 @@ async function handleTranslateRequest(text, targetLanguage = 'en') {
     }
 
     const data = await response.json();
+
+    Logger.debug(`API Response [${requestId}]`, {
+      status: response.status,
+      statusText: response.statusText,
+      responseData: data
+    });
+
     const translatedText = data.choices?.[0]?.message?.content?.trim();
 
     if (!translatedText) {
       throw new Error('No translation returned from OpenAI API');
     }
 
-    console.log('Translation successful');
+    Logger.debug(`Translation complete [${requestId}]`, {
+      originalText: text,
+      translatedText: translatedText,
+      targetLanguage: targetLanguage,
+      batchIndex: batchIndex
+    });
+
     return {
       originalText: text,
       translatedText: translatedText,
-      targetLanguage: targetLanguage
+      targetLanguage: targetLanguage,
+      requestId: requestId,
+      batchIndex: batchIndex
     };
 
   } catch (error) {
